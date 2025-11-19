@@ -1,7 +1,9 @@
+
 import pygame
-import time
+import gymnasium as gym
 from enemy import Enemy
 from tower import Tower
+
 
 # Window size
 screen_width = 1000
@@ -17,7 +19,6 @@ max_board_width = screen_width - 300
 max_board_height = screen_height - 40
 board_size = min(max_board_width, max_board_height)
 
-# Make sure board_size is divisible by 15 so tiles are integer-sized
 tile_count = 10
 tile_size = board_size // tile_count
 board_size = tile_size * tile_count
@@ -26,16 +27,16 @@ board_x = (screen_width - board_size) // 2
 board_y = (screen_height - board_size) // 2
 
 # Colors
-bg_color = (40, 40, 40)        # window background
-board_color = (0, 0, 0)        # board background
-ui_panel_color = (60, 60, 60)  # UI panel background
-ui_box_color = (80, 80, 80)    # Tower inventory box
-ui_box_hover = (100, 100, 100) # Hover color
-ui_box_border = (200, 200, 200) # Border color
-line_color = (0, 0, 0)         # grid lines
-tower_tile_color_a = (72, 209, 56)
-tower_tile_color_b = (42, 115, 33)
-path_tile_color = (227, 189, 0)
+bg_color = (40, 40, 40)             # window background
+board_color = (0, 0, 0)             # board background
+ui_panel_color = (60, 60, 60)       # UI panel background
+ui_box_color = (80, 80, 80)         # Tower inventory box
+ui_box_hover = (100, 100, 100)      # Hover color
+ui_box_border = (200, 200, 200)     # Border color
+line_color = (0, 0, 0)              # Grid lines
+tower_tile_color_a = (72, 209, 56)  # Tower tile 1
+tower_tile_color_b = (42, 115, 33)  # Tower tile 2
+path_tile_color = (227, 189, 0)     # Path tile
 
 
 
@@ -267,6 +268,10 @@ def main():
     enemies_spawned = 0
     spawn_interval = 1.0
     last_spawn_time = pygame.time.get_ticks() / 1000.0  # Convert to seconds
+    spawn_started = False  # Start spawning only after clicking Play
+
+    # UI font for buttons/labels
+    button_font = pygame.font.SysFont(None, 24)
 
     tower_sprites = []
     try:
@@ -298,6 +303,18 @@ def main():
                     print(pygame.key.name(event.key))
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 click_pos = list(pygame.mouse.get_pos())
+                
+                # Play button: bottom-left next to the board
+                play_btn_rect = pygame.Rect(board_x, board_y + board_size + 6, 120, 32)
+                if play_btn_rect.collidepoint(click_pos):
+                    # Start or restart the 5-enemy spawn sequence
+                    spawn_started = True
+                    enemies_spawned = 0
+                    enemies.clear()
+                    last_spawn_time = pygame.time.get_ticks() / 1000.0
+                    print("Play pressed: spawning sequence started")
+                    # Ignore other click handlers for this event
+                    continue
                 
                 # Check if clicked on tower inventory to start dragging
                 if 'inventory_areas' in locals() and not dragging_tower:
@@ -354,9 +371,9 @@ def main():
 
         mouse_pos = list(pygame.mouse.get_pos())
 
-        # Spawn enemies at time-based intervals
+        # Spawn enemies at time-based intervals (gated by Play button)
         current_time = pygame.time.get_ticks() / 1000.0
-        if enemies_spawned < enemies_to_spawn:
+        if spawn_started and enemies_spawned < enemies_to_spawn:
             if current_time - last_spawn_time >= spawn_interval:
                 new_enemy = Enemy(x=0, y=0, health=100, velocity=2.0)
                 new_enemy.set_path(enemy_path)
@@ -392,15 +409,30 @@ def main():
         pygame.draw.rect(screen, (255, 255, 255), (enemy_spawn_coords[0], enemy_spawn_coords[1], tile_size / 2, tile_size / 2))
         pygame.draw.rect(screen, (255, 0, 255), (enemy_spawn_coords[0]+1, enemy_spawn_coords[1]+1, tile_size / 2 - 2, tile_size / 2 - 2))
 
+        # Draw Play button (bottom-left near the board)
+        play_btn_rect = pygame.Rect(board_x, board_y + board_size + 6, 120, 32)
+        # Determine button state/color/label
+        if not spawn_started:
+            btn_color, btn_label = (50, 180, 80), "Play"
+        elif enemies_spawned < enemies_to_spawn or len(enemies) > 0:
+            btn_color, btn_label = (200, 160, 40), "Playing..."
+        else:
+            btn_color, btn_label = (80, 80, 80), "Replay"
+        pygame.draw.rect(screen, btn_color, play_btn_rect, border_radius=6)
+        pygame.draw.rect(screen, (230, 230, 230), play_btn_rect, 2, border_radius=6)
+        label_surf = button_font.render(btn_label, True, (0, 0, 0))
+        label_rect = label_surf.get_rect(center=play_btn_rect.center)
+        screen.blit(label_surf, label_rect)
+
         # Debug: draw path waypoints
-        if enemy_path:
-            last_point = None
-            for wp in enemy_path:
-                p = (int(wp["x"]), int(wp["y"]))
-                pygame.draw.circle(screen, (0, 255, 255), p, max(2, tile_size // 8))
-                if last_point is not None:
-                    pygame.draw.line(screen, (0, 200, 200), last_point, p, 2)
-                last_point = p
+        # if enemy_path:
+        #     last_point = None
+        #     for wp in enemy_path:
+        #         p = (int(wp["x"]), int(wp["y"]))
+        #         pygame.draw.circle(screen, (0, 255, 255), p, max(2, tile_size // 8))
+        #         if last_point is not None:
+        #             pygame.draw.line(screen, (0, 200, 200), last_point, p, 2)
+        #         last_point = p
 
         # Draw tower inventory panel and get clickable areas
         inventory_areas = draw_tower_inventory(screen, tower_sprites, mouse_pos)
