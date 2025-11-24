@@ -265,6 +265,7 @@ def main():
     enemies = []
     
     enemies_to_spawn = 5
+    can_spawn = True
     enemies_spawned = 0
     spawn_interval = 1.0
     last_spawn_time = pygame.time.get_ticks() / 1000.0  # Convert to seconds
@@ -306,14 +307,12 @@ def main():
                 
                 # Play button: bottom-left next to the board
                 play_btn_rect = pygame.Rect(board_x, board_y + board_size + 6, 120, 32)
-                if play_btn_rect.collidepoint(click_pos):
+                if play_btn_rect.collidepoint(click_pos) and can_spawn:
                     # Start or restart the 5-enemy spawn sequence
+                    can_spawn = False
                     spawn_started = True
-                    enemies_spawned = 0
-                    enemies.clear()
                     last_spawn_time = pygame.time.get_ticks() / 1000.0
                     print("Play pressed: spawning sequence started")
-                    # Ignore other click handlers for this event
                     continue
                 
                 # Check if clicked on tower inventory to start dragging
@@ -374,12 +373,16 @@ def main():
         # Spawn enemies at time-based intervals (gated by Play button)
         current_time = pygame.time.get_ticks() / 1000.0
         if spawn_started and enemies_spawned < enemies_to_spawn:
+            can_spawn = False
             if current_time - last_spawn_time >= spawn_interval:
                 new_enemy = Enemy(x=0, y=0, health=100, velocity=2.0)
                 new_enemy.set_path(enemy_path)
                 enemies.append(new_enemy)
                 enemies_spawned += 1
                 last_spawn_time = current_time
+
+        if len(enemies) == enemies_to_spawn:
+            spawn_started = False
 
         # Update all enemies and remove those that reached the end
         for enemy in enemies[:]:
@@ -411,13 +414,17 @@ def main():
 
         # Draw Play button (bottom-left near the board)
         play_btn_rect = pygame.Rect(board_x, board_y + board_size + 6, 120, 32)
+    
         # Determine button state/color/label
-        if not spawn_started:
+        if len(enemies) == 0:
+            can_spawn = True
+            enemies_spawned = 0
+        
+        if can_spawn:
             btn_color, btn_label = (50, 180, 80), "Play"
-        elif enemies_spawned < enemies_to_spawn or len(enemies) > 0:
+        elif not can_spawn:
             btn_color, btn_label = (200, 160, 40), "Playing..."
-        else:
-            btn_color, btn_label = (80, 80, 80), "Replay"
+        
         pygame.draw.rect(screen, btn_color, play_btn_rect, border_radius=6)
         pygame.draw.rect(screen, (230, 230, 230), play_btn_rect, 2, border_radius=6)
         label_surf = button_font.render(btn_label, True, (0, 0, 0))
