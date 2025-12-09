@@ -1,8 +1,11 @@
 
 import pygame
 import gymnasium as gym
+from gymnasium import spaces
+import numpy as np
 from enemy import Enemy
-from tower import Tower
+from tower import Tower, Bullet
+from factory import Factory
 
 
 # Window size
@@ -38,7 +41,15 @@ tower_tile_color_a = (72, 209, 56)  # Tower tile 1
 tower_tile_color_b = (42, 115, 33)  # Tower tile 2
 path_tile_color = (227, 189, 0)     # Path tile
 
+KILL_REWARD = 1.0
+HEALTH_PENALTY = 1.0
+TOWER_COST = 5
+STARTING_MONEY = 5
+STARTING_HEALTH = 100
 
+STARTING_RESOURCE_1 = 0
+
+ENEMY_SPAWN_INTERVAL = 0.5
 
 def get_tile_center(col: int, row: int):
     cx = board_x + col * tile_size + tile_size / 2
@@ -79,7 +90,37 @@ def draw_tower_inventory(surface: pygame.Surface, tower_sprites: list, mouse_pos
     
     return clickable_areas
 
+def draw_factory_inventory(surface: pygame.Surface, factory_sprites: list, mouse_pos: tuple):
+    panel_x = board_x + board_size + 20
+    panel_y = board_y + board_size / 2
+    panel_width = screen_width - panel_x - 20
+    
+    pygame.draw.line(surface, (100, 100, 100), (panel_x, panel_y), (panel_x + panel_width, panel_y), 3)
 
+    box_size = 80
+    box_padding = 10
+    start_y = panel_y + 20
+    
+    clickable_areas = []
+    
+    for i, sprite in enumerate(factory_sprites):
+        box_y = start_y + i * (box_size + box_padding)
+        box_rect = pygame.Rect(panel_x + 10, box_y, box_size, box_size)
+        
+        is_hover = box_rect.collidepoint(mouse_pos)
+        box_color = ui_box_hover if is_hover else ui_box_color
+        
+        pygame.draw.rect(surface, box_color, box_rect)
+        pygame.draw.rect(surface, ui_box_border, box_rect, 2)
+        
+        if sprite is not None:
+            sprite_rect = sprite.get_rect(center=box_rect.center)
+            surface.blit(sprite, sprite_rect)
+        
+        clickable_areas.append((box_rect, i))
+        
+    return clickable_areas
+        
 def build_enemy_path(board: list, enemy_spawn: list, home_base: list):
 
     total_rows = len(board)
@@ -238,6 +279,10 @@ def main():
     
     board = []
     
+    money = STARTING_MONEY
+    health = STARTING_HEALTH
+    resource_1 = STARTING_RESOURCE_1
+    
     for i in range(11):
         board.append([int(x) for x in board_file.readline().strip().split(",")])
     
@@ -261,18 +306,23 @@ def main():
         enemy_path[-1]["x"] = home_base_coords[0] + tile_size / 4
         enemy_path[-1]["y"] = home_base_coords[1] + tile_size / 4
 
+    bullets = []
+
     # Enemies list
     enemies = []
     
     enemies_to_spawn = 5
     can_spawn = True
     enemies_spawned = 0
-    spawn_interval = 1.0
+    spawn_interval = ENEMY_SPAWN_INTERVAL
     last_spawn_time = pygame.time.get_ticks() / 1000.0  # Convert to seconds
     spawn_started = False  # Start spawning only after clicking Play
 
-    # UI font for buttons/labels
+    # UI fonts
     button_font = pygame.font.SysFont(None, 24)
+    money_font = pygame.font.SysFont(None, 26)
+    health_font = pygame.font.SysFont(None, 26)
+    resource_1_font = pygame.font.SysFont(None, 26)
 
     tower_sprites = []
     try:
@@ -284,12 +334,28 @@ def main():
         print(f"Could not load tower sprite: {e}")
         tower_sprites.append(None)
 
+    factory_sprites = []
+    try:
+        factory_sprite_1 = pygame.image.load("Sprites/Factories/Factory-#1.png")
+        # Scale sprite
+        factory_sprite_1 = pygame.transform.scale(factory_sprite_1, (60, 60))
+        factory_sprites.append(factory_sprite_1)
+    except pygame.error as e:
+        print(f"Could not load factory sprite: {e}")
+        factory_sprites.append(None)
+
     # Towers list
     towers = []
     
     dragging_tower = False
     dragged_tower_index = None
     drag_sprite = None
+    can_place_towers = True  # Locked during an active wave
+
+    factories = []
+    
+    dragging_factory = False
+    dragged_factory_index = None
 
     running = True
     tile_type = ""
@@ -312,12 +378,15 @@ def main():
                     can_spawn = False
                     spawn_started = True
                     last_spawn_time = pygame.time.get_ticks() / 1000.0
+                    can_place_towers = False  # Lock tower placement during wave
+                    for factory in factories:
+                        factory.last_production_time_ms = current_time
                     print("Play pressed: spawning sequence started")
                     continue
                 
                 # Check if clicked on tower inventory to start dragging
-                if 'inventory_areas' in locals() and not dragging_tower:
-                    for box_rect, tower_index in inventory_areas:
+                if 'tower_inventory_areas' in locals() and not dragging_tower and can_place_towers:
+                    for box_rect, tower_index in tower_inventory_areas:
                         if box_rect.collidepoint(click_pos):
                             dragging_tower = True
                             dragged_tower_index = tower_index
@@ -326,6 +395,18 @@ def main():
                                 drag_sprite = pygame.transform.scale(original, (tile_size, tile_size))
                             print(f"Started dragging tower {tower_index}")
                             break
+                        
+                if 'factory_inventory_areas' in locals() and not dragging_factory and can_place_towers:
+                    for box_rect, factory_index in factory_inventory_areas:
+                        if box_rect.collidepoint(click_pos):
+                            dragging_factory = True
+                            dragged_factory_index = factory_index
+                            if factory_index < len(factory_sprites) and factory_sprites[factory_index] is not None:
+                                original = pygame.image.load("Sprites/Factories/Factory-#1.png")
+                                drag_sprite = pygame.transform.scale(original, (tile_size, tile_size))
+                            print(f"Started draggin factory {factory_index}")
+                            break
+                        
                 
             elif event.type == pygame.MOUSEBUTTONUP:
                 if dragging_tower:
@@ -339,14 +420,17 @@ def main():
                         
                         # Check if tile is valid
                         if tile_x < len(board[0]) - 1 and tile_y < len(board) - 1:
-                            if board[tile_y][tile_x] == 1:
+                            if board[tile_y][tile_x] == 1 and money >= 5:
                                 # Place tower
                                 tower_center_x, tower_center_y = get_tile_center(tile_x, tile_y)
                                 new_tower = Tower(tower_center_x, tower_center_y, health=100, tile_size=tile_size)
+                                money -= new_tower.price
                                 towers.append(new_tower)
                                 # Mark tile as occupied
                                 board[tile_y][tile_x] = 2
                                 print(f"Placed tower at tile ({tile_x}, {tile_y})")
+                            elif money <= 5:
+                                print(f"Not enough money to place tower. Money: {money}")
                             else:
                                 print(f"Cannot place tower on tile ({tile_x}, {tile_y}) - invalid tile type")
                     
@@ -354,6 +438,31 @@ def main():
                     dragging_tower = False
                     dragged_tower_index = None
                     drag_sprite = None
+                    
+                if dragging_factory:
+                    mouse_x, mouse_y = pygame.mouse.get_pos()
+                    
+                    if (mouse_x >= board_x and mouse_x <= board_x + board_size) and (mouse_y >= board_y and mouse_y <= board_y + board_size):
+                        tile_x = (mouse_x - board_x) // tile_size
+                        tile_y = (mouse_y - board_y) // tile_size
+                        
+                        if tile_x < len(board[0]) - 1 and tile_y < len(board) - 1:
+                            if board[tile_y][tile_x] == 1 and money >= 5:
+                                factory_center_x, factory_center_y = get_tile_center(tile_x, tile_y)
+                                new_factory = Factory(factory_center_x, factory_center_y, health=100, tile_size=tile_size)
+                                money -= new_factory.price
+                                factories.append(new_factory)
+                                board[tile_y][tile_x] = 2
+                                print(f"Placed factory at tile ({tile_x}, {tile_y})")
+                            elif money <= 5:
+                                print(f"Not enough money to place factory. Money: {money}")
+                            else:
+                                print(f"Cannot place factory on tile ({tile_x}, {tile_y}) - invalid tile type")
+                    
+                    dragging_factory = False
+                    dragged_factory_index = None
+                    drag_sprite = None
+                        
                 
                 # Board debug
                 if (click_pos[0] >= board_x and click_pos[0] <= board_x + board_size) and (click_pos[1] >= board_y and click_pos[1] <= board_y + board_size):
@@ -370,24 +479,30 @@ def main():
 
         mouse_pos = list(pygame.mouse.get_pos())
 
-        # Spawn enemies at time-based intervals (gated by Play button)
+        # Spawn enemies at time-based intervals
         current_time = pygame.time.get_ticks() / 1000.0
         if spawn_started and enemies_spawned < enemies_to_spawn:
-            can_spawn = False
             if current_time - last_spawn_time >= spawn_interval:
-                new_enemy = Enemy(x=0, y=0, health=100, velocity=2.0)
+                new_enemy = Enemy(x=0, y=0, health=100, velocity=5.0)
                 new_enemy.set_path(enemy_path)
                 enemies.append(new_enemy)
                 enemies_spawned += 1
                 last_spawn_time = current_time
+                if enemies_spawned == enemies_to_spawn:
+                    # Finished spawning wave
+                    spawn_started = False
 
-        if len(enemies) == enemies_to_spawn:
-            spawn_started = False
+        # Lock play until wave ends
+        if not spawn_started and enemies_spawned == enemies_to_spawn and len(enemies) == 0:
+            can_spawn = True
+            enemies_spawned = 0
+            can_place_towers = True
 
         # Update all enemies and remove those that reached the end
         for enemy in enemies[:]:
             enemy.follow_path()
             if enemy.reached_end:
+                health -= enemy.damage
                 enemies.remove(enemy)
 
         # Draw background and empty side areas
@@ -412,24 +527,33 @@ def main():
         pygame.draw.rect(screen, (255, 255, 255), (enemy_spawn_coords[0], enemy_spawn_coords[1], tile_size / 2, tile_size / 2))
         pygame.draw.rect(screen, (255, 0, 255), (enemy_spawn_coords[0]+1, enemy_spawn_coords[1]+1, tile_size / 2 - 2, tile_size / 2 - 2))
 
-        # Draw Play button (bottom-left near the board)
+        # Draw Play button
         play_btn_rect = pygame.Rect(board_x, board_y + board_size + 6, 120, 32)
     
         # Determine button state/color/label
-        if len(enemies) == 0:
-            can_spawn = True
-            enemies_spawned = 0
-        
-        if can_spawn:
+        if spawn_started:
+            btn_color, btn_label = (200, 160, 40), "Spawning..."
+        elif can_spawn:
             btn_color, btn_label = (50, 180, 80), "Play"
-        elif not can_spawn:
-            btn_color, btn_label = (200, 160, 40), "Playing..."
+        else:
+            btn_color, btn_label = (120, 120, 120), "Playing..."
         
         pygame.draw.rect(screen, btn_color, play_btn_rect, border_radius=6)
         pygame.draw.rect(screen, (230, 230, 230), play_btn_rect, 2, border_radius=6)
         label_surf = button_font.render(btn_label, True, (0, 0, 0))
         label_rect = label_surf.get_rect(center=play_btn_rect.center)
         screen.blit(label_surf, label_rect)
+        # Money HUD
+        money_surf = money_font.render(f"Money: {money}", True, (230,230,230))
+        screen.blit(money_surf, (10, 10))
+        
+        # Health HUD
+        health_surf = health_font.render(f"Health: {health}", True, (230,230,230))
+        screen.blit(health_surf, (10, 35))
+        
+        # Resource HUD
+        resource_1_surf = resource_1_font.render(f"Resource #1: {resource_1}", True, (230, 230, 230))
+        screen.blit(resource_1_surf, (10, 60))
 
         # Debug: draw path waypoints
         # if enemy_path:
@@ -442,21 +566,60 @@ def main():
         #         last_point = p
 
         # Draw tower inventory panel and get clickable areas
-        inventory_areas = draw_tower_inventory(screen, tower_sprites, mouse_pos)
+        tower_inventory_areas = draw_tower_inventory(screen, tower_sprites, mouse_pos)
+        
+        factory_inventory_areas = draw_factory_inventory(screen, factory_sprites, mouse_pos)
 
-        # Draw all towers
+        # Draw all towers (pass milliseconds for cooldown timing)
+        current_time_ms = pygame.time.get_ticks()
         for tower in towers:
+            tower.update(current_time_ms, enemies, bullets)
             tower.draw(screen)
+            
+        for factory in factories:
+            resource_1 += factory.produce(current_time_ms, not can_place_towers)
+            factory.draw(screen)
+        
+        # Update and draw bullets
+        delta_time = clock.get_time() / 16.67  # Normalize to ~60fps
+        for bullet in bullets[:]:
+            bullet.move(delta_time)
 
-        # Draw all active enemies
+            # Build bullet rect
+            bullet_size = 4
+            bullet_rect = pygame.Rect(int(bullet.x - bullet_size / 2), int(bullet.y - bullet_size / 2), bullet_size, bullet_size)
+
+            hit_enemy = None
+            for enemy in enemies:
+                # Enemy bounding box
+                enemy_radius = getattr(enemy, 'size', 10)
+                enemy_rect = pygame.Rect(int(enemy.x - enemy_radius), int(enemy.y - enemy_radius), enemy_radius * 2, enemy_radius * 2)
+                if bullet_rect.colliderect(enemy_rect):
+                    hit_enemy = enemy
+                    break
+
+            if hit_enemy:
+                money += getattr(hit_enemy, 'reward', 1)
+                enemies.remove(hit_enemy)
+                bullets.remove(bullet)
+                continue
+
+            # Remove bullets that leave the screen
+            if bullet.x < 0 or bullet.x > screen_width or bullet.y < 0 or bullet.y > screen_height:
+                bullets.remove(bullet)
+                continue
+
+            bullet.draw(screen, size=bullet_size)
+
+        # Draw enemies
         for enemy in enemies:
             enemy.draw(screen, color=(255, 100, 100), size=10)
 
-        # Draw dragged tower following mouse
-        if dragging_tower and drag_sprite is not None:
+        # Draw tower following mouse
+        if (dragging_tower or dragging_factory) and drag_sprite is not None:
             drag_x, drag_y = pygame.mouse.get_pos()
             
-            # Show placement preview if hovering over board
+            # Show placement preview
             if (drag_x >= board_x and drag_x <= board_x + board_size) and (drag_y >= board_y and drag_y <= board_y + board_size):
                 hover_tile_x = (drag_x - board_x) // tile_size
                 hover_tile_y = (drag_y - board_y) // tile_size
@@ -475,7 +638,7 @@ def main():
                     overlay_surf.fill(overlay_color)
                     screen.blit(overlay_surf, (tile_screen_x, tile_screen_y))
             
-            # Draw tower sprite at mouse cursor
+            # Draw tower
             sprite_rect = drag_sprite.get_rect(center=(drag_x, drag_y))
             screen.blit(drag_sprite, sprite_rect)
 

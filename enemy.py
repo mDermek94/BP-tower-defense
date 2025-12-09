@@ -9,7 +9,11 @@ class Enemy:
         self.velocity = velocity
         self.x = x
         self.y = y
+        self.size = 8
         self.facing = (1.0, 0.0)
+        
+        self.reward = 1
+        self.damage = 10
         
         self.path = []
         self.current_waypoint_index = 0
@@ -84,8 +88,10 @@ class Enemy:
     
     def draw(self, surface: pygame.Surface, color: tuple = (255, 100, 100), size: int = 8):
 
-        pygame.draw.circle(surface, color, (int(self.x), int(self.y)), size)
+        self.size = size
+
+        pygame.draw.circle(surface, color, (int(self.x), int(self.y)), self.size)
         
-        end_x = int(self.x + self.facing[0] * size * 1.5)
-        end_y = int(self.y + self.facing[1] * size * 1.5)
+        end_x = int(self.x + self.facing[0] * self.size * 1.5)
+        end_y = int(self.y + self.facing[1] * self.size * 1.5)
         pygame.draw.line(surface, (255, 255, 255), (int(self.x), int(self.y)), (end_x, end_y), 2)
