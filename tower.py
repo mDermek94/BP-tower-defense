@@ -83,29 +83,33 @@ class Tower:
     sprite = None
     sprite_size = None
     
-    def __init__(self, x: float, y: float, health: int, tile_size: int):
+    def __init__(self, x: float, y: float, health: int, tile_size: int, type: int = 0):
 
         self.x = x
         self.y = y
         self.health = health
         self.shoot_radius = 2.5 * tile_size
-        self.shot_cooldown = 500
+        self.shot_cooldown = 800
         self.last_shot_time = 0
         self.bullet_speed = 3.2
         self.price = 5
+        self.type = type
+        self.sprite = None
+        self.sprite_size = 1
         
         # Load and scale sprite
-        if Tower.sprite is None:
+        if self.sprite is None:
             try:
-                original = pygame.image.load("Sprites/Towers/Tower-#1.png")
+                original = pygame.image.load(f"Sprites/Towers/Tower-#{self.type + 1}.png")
+                print(f"Used Tower Sprite {self.type + 1}")
                 # Scale to fit tile size
                 scale_factor = max(1, tile_size // original.get_width())
                 new_size = original.get_width() * scale_factor
-                Tower.sprite = pygame.transform.scale(original, (new_size, new_size))
-                Tower.sprite_size = new_size
+                self.sprite = pygame.transform.scale(original, (new_size, new_size))
+                self.sprite_size = new_size
             except pygame.error as e:
                 print(f"Could not load tower sprite: {e}")
-                Tower.sprite = None
+                self.sprite = None
     
     def enemy_distance(self, enemy_x: float, enemy_y: float):
         dx = enemy_x - self.x
@@ -158,10 +162,10 @@ class Tower:
     
     def draw(self, surface: pygame.Surface):
 
-        if Tower.sprite is not None:
+        if self.sprite is not None:
             # Draw sprite
-            rect = Tower.sprite.get_rect(center=(int(self.x), int(self.y)))
-            surface.blit(Tower.sprite, rect)
+            rect = self.sprite.get_rect(center=(int(self.x), int(self.y)))
+            surface.blit(self.sprite, rect)
         else:
             # Draw a rectangle if sprite failed to load
             pygame.draw.rect(surface, (100, 100, 100), 

@@ -3,14 +3,24 @@ import pygame
 import math
 
 class Enemy:
-    def __init__(self, x: float, y: float, health: int = 100, velocity: float = 1.5):
+    def __init__(self, x: float, y: float, type: int = 0):
 
-        self.health = health
-        self.velocity = velocity
         self.x = x
         self.y = y
         self.size = 8
         self.facing = (1.0, 0.0)
+        
+        self.type = type
+
+        if self.type == 0:
+            self.health = 100
+            self.velocity = 3.5
+            self.color = (255, 100, 100)
+            
+        if self.type == 1:
+            self.health = 100
+            self.velocity = 4.0
+            self.color = (100, 255, 100)
         
         self.reward = 1
         self.damage = 10
@@ -86,11 +96,11 @@ class Enemy:
         else:
             return (1.0, 0.0)
     
-    def draw(self, surface: pygame.Surface, color: tuple = (255, 100, 100), size: int = 8):
+    def draw(self, surface: pygame.Surface, size: int = 8):
 
         self.size = size
 
-        pygame.draw.circle(surface, color, (int(self.x), int(self.y)), self.size)
+        pygame.draw.circle(surface, self.color, (int(self.x), int(self.y)), self.size)
         
         end_x = int(self.x + self.facing[0] * self.size * 1.5)
         end_y = int(self.y + self.facing[1] * self.size * 1.5)

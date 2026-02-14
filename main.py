@@ -30,8 +30,8 @@ board_x = (screen_width - board_size) // 2
 board_y = (screen_height - board_size) // 2
 
 # Colors
-bg_color = (40, 40, 40)             # window background
-board_color = (0, 0, 0)             # board background
+bg_color = (40, 40, 40)             # Window background
+board_color = (0, 0, 0)             # Board background
 ui_panel_color = (60, 60, 60)       # UI panel background
 ui_box_color = (80, 80, 80)         # Tower inventory box
 ui_box_hover = (100, 100, 100)      # Hover color
@@ -41,15 +41,22 @@ tower_tile_color_a = (72, 209, 56)  # Tower tile 1
 tower_tile_color_b = (42, 115, 33)  # Tower tile 2
 path_tile_color = (227, 189, 0)     # Path tile
 
+CURRENT_BOARD_FILE = "board_test_2.txt"
+CURRENT_WAVE_FILE = "wave_test_1.txt"
+
 KILL_REWARD = 1.0
 HEALTH_PENALTY = 1.0
+
 TOWER_COST = 5
-STARTING_MONEY = 5
+
 STARTING_HEALTH = 100
 
+STARTING_MONEY = 10
 STARTING_RESOURCE_1 = 0
 
 ENEMY_SPAWN_INTERVAL = 0.5
+
+MAX_WAVES = 8
 
 def get_tile_center(col: int, row: int):
     cx = board_x + col * tile_size + tile_size / 2
@@ -199,6 +206,32 @@ def build_enemy_path(board: list, enemy_spawn: list, home_base: list):
     return waypoints
 
 
+def build_enemy_waves():    
+    waves = []
+
+    with open(CURRENT_WAVE_FILE, "r") as file:
+        for line in file:
+            line = line.strip().split(",")
+            
+            if line == "":
+                break
+            
+            enemies_in_wave = []
+            for num_enemy_type in line:
+                enemies_in_wave.append(num_enemy_type.split("x"))
+            
+            enemies = []
+            for i in range(len(enemies_in_wave)):
+                for j in range(int(enemies_in_wave[i][0])):
+                    if (enemies_in_wave[i][0] != 0):
+                        enemies.append(int(enemies_in_wave[i][1]))
+            
+            if enemies != []:
+                waves.append(enemies)
+
+    return waves
+    
+    
 def draw_board(surface: pygame.Surface, board: list):
     # Draw board background
     board_rect = pygame.Rect(board_x, board_y, board_size, board_size)
@@ -255,10 +288,10 @@ def get_base_enemy_coords(home_base, enemy_spawn):
     elif enemy_spawn[0] == 9:
         enemy_spawn_x = board_x + tile_size * int(enemy_spawn[0]) + tile_size
         enemy_spawn_y = board_y + tile_size * int(enemy_spawn[1]) + tile_size / 4
-    elif enemy_spawn[0] == 0:
+    elif enemy_spawn[1] == 0:
         enemy_spawn_x = board_x + tile_size * int(enemy_spawn[0]) + tile_size / 4
         enemy_spawn_y = board_y + tile_size * int(enemy_spawn[1]) - tile_size / 2
-    elif enemy_spawn[0] == 9:
+    elif enemy_spawn[1] == 9:
         enemy_spawn_x = board_x + tile_size * int(enemy_spawn[0]) + tile_size / 4
         enemy_spawn_y = board_y + tile_size * int(enemy_spawn[1]) + tile_size
         
@@ -275,13 +308,15 @@ def get_base_enemy_coords(home_base, enemy_spawn):
 def main():
     pygame.init()
     
-    board_file = open("board_test.txt", "r")
+    board_file = open(CURRENT_BOARD_FILE, "r")
     
     board = []
     
     money = STARTING_MONEY
     health = STARTING_HEALTH
     resource_1 = STARTING_RESOURCE_1
+    
+    current_wave = 1
     
     for i in range(11):
         board.append([int(x) for x in board_file.readline().strip().split(",")])
@@ -295,6 +330,9 @@ def main():
 
     # Build enemy path
     enemy_path = build_enemy_path(board, enemy_spawn, home_base)
+    
+    enemy_waves = build_enemy_waves()
+    MAX_WAVES = len(enemy_waves)
     
     home_base_coords, enemy_spawn_coords = get_base_enemy_coords(home_base, enemy_spawn)
 
@@ -311,7 +349,7 @@ def main():
     # Enemies list
     enemies = []
     
-    enemies_to_spawn = 5
+    enemies_to_spawn = 1
     can_spawn = True
     enemies_spawned = 0
     spawn_interval = ENEMY_SPAWN_INTERVAL
@@ -323,6 +361,7 @@ def main():
     money_font = pygame.font.SysFont(None, 26)
     health_font = pygame.font.SysFont(None, 26)
     resource_1_font = pygame.font.SysFont(None, 26)
+    wave_font = pygame.font.SysFont(None, 26)
 
     tower_sprites = []
     try:
@@ -330,6 +369,11 @@ def main():
         # Scale sprite
         tower_sprite_1 = pygame.transform.scale(tower_sprite_1, (60, 60))
         tower_sprites.append(tower_sprite_1)
+        
+        tower_sprite_2 = pygame.image.load("Sprites/Towers/Tower-#2.png")
+        # Scale sprite
+        tower_sprite_2 = pygame.transform.scale(tower_sprite_2, (60, 60))
+        tower_sprites.append(tower_sprite_2)
     except pygame.error as e:
         print(f"Could not load tower sprite: {e}")
         tower_sprites.append(None)
@@ -377,6 +421,8 @@ def main():
                     # Start or restart the 5-enemy spawn sequence
                     can_spawn = False
                     spawn_started = True
+                    enemies_to_spawn = len(enemy_waves[current_wave - 1])
+                    print(f"Current wave has {enemies_to_spawn} enemies.")
                     last_spawn_time = pygame.time.get_ticks() / 1000.0
                     can_place_towers = False  # Lock tower placement during wave
                     for factory in factories:
@@ -391,7 +437,7 @@ def main():
                             dragging_tower = True
                             dragged_tower_index = tower_index
                             if tower_index < len(tower_sprites) and tower_sprites[tower_index] is not None:
-                                original = pygame.image.load("Sprites/Towers/Tower-#1.png")
+                                original = pygame.image.load(f"Sprites/Towers/Tower-#{tower_index + 1}.png")
                                 drag_sprite = pygame.transform.scale(original, (tile_size, tile_size))
                             print(f"Started dragging tower {tower_index}")
                             break
@@ -402,7 +448,7 @@ def main():
                             dragging_factory = True
                             dragged_factory_index = factory_index
                             if factory_index < len(factory_sprites) and factory_sprites[factory_index] is not None:
-                                original = pygame.image.load("Sprites/Factories/Factory-#1.png")
+                                original = pygame.image.load(f"Sprites/Factories/Factory-#{factory_index + 1}.png")
                                 drag_sprite = pygame.transform.scale(original, (tile_size, tile_size))
                             print(f"Started draggin factory {factory_index}")
                             break
@@ -420,7 +466,7 @@ def main():
                         
                         # Check if tile is valid
                         if tile_x < len(board[0]) - 1 and tile_y < len(board) - 1:
-                            if board[tile_y][tile_x] == 1 and money >= 5:
+                            if board[tile_y][tile_x] == 1 and money >= 5 and tower_index == 0:
                                 # Place tower
                                 tower_center_x, tower_center_y = get_tile_center(tile_x, tile_y)
                                 new_tower = Tower(tower_center_x, tower_center_y, health=100, tile_size=tile_size)
@@ -429,8 +475,20 @@ def main():
                                 # Mark tile as occupied
                                 board[tile_y][tile_x] = 2
                                 print(f"Placed tower at tile ({tile_x}, {tile_y})")
-                            elif money <= 5:
+                            elif money < 5 and (tower_index == 0 or tower_index == 1):
                                 print(f"Not enough money to place tower. Money: {money}")
+                            elif board[tile_y][tile_x] == 1 and money >= 5 and resource_1 >= 5 and tower_index == 1:
+                                # Place tower
+                                tower_center_x, tower_center_y = get_tile_center(tile_x, tile_y)
+                                new_tower = Tower(tower_center_x, tower_center_y, health=100, tile_size=tile_size, type=tower_index)
+                                money -= new_tower.price
+                                resource_1 -= new_tower.price
+                                towers.append(new_tower)
+                                # Mark tile as occupied
+                                board[tile_y][tile_x] = 2
+                                print(f"Placed tower at tile ({tile_x}, {tile_y})")
+                            elif tower_index == 1 and resource_1 < 5:
+                                print(f"Not enough resource_1 to place tower. Resource_1: {resource_1}")
                             else:
                                 print(f"Cannot place tower on tile ({tile_x}, {tile_y}) - invalid tile type")
                     
@@ -483,7 +541,7 @@ def main():
         current_time = pygame.time.get_ticks() / 1000.0
         if spawn_started and enemies_spawned < enemies_to_spawn:
             if current_time - last_spawn_time >= spawn_interval:
-                new_enemy = Enemy(x=0, y=0, health=100, velocity=5.0)
+                new_enemy = Enemy(x=0, y=0, type=enemy_waves[current_wave - 1][enemies_spawned])
                 new_enemy.set_path(enemy_path)
                 enemies.append(new_enemy)
                 enemies_spawned += 1
@@ -497,6 +555,7 @@ def main():
             can_spawn = True
             enemies_spawned = 0
             can_place_towers = True
+            current_wave += 1
 
         # Update all enemies and remove those that reached the end
         for enemy in enemies[:]:
@@ -554,6 +613,10 @@ def main():
         # Resource HUD
         resource_1_surf = resource_1_font.render(f"Resource #1: {resource_1}", True, (230, 230, 230))
         screen.blit(resource_1_surf, (10, 60))
+        
+        # Wave number HUD
+        wave_surf = wave_font.render(f"Wave: {current_wave}/{MAX_WAVES}", True, (230,230,230))
+        screen.blit(wave_surf, (120, 32))
 
         # Debug: draw path waypoints
         # if enemy_path:
@@ -613,7 +676,7 @@ def main():
 
         # Draw enemies
         for enemy in enemies:
-            enemy.draw(screen, color=(255, 100, 100), size=10)
+            enemy.draw(screen, size=10)
 
         # Draw tower following mouse
         if (dragging_tower or dragging_factory) and drag_sprite is not None:
@@ -641,6 +704,14 @@ def main():
             # Draw tower
             sprite_rect = drag_sprite.get_rect(center=(drag_x, drag_y))
             screen.blit(drag_sprite, sprite_rect)
+
+        # Victory - beating all waves
+        #if current_wave >= MAX_WAVES:
+        #    print("Game finished.")
+
+        # Loss - losing all health
+        #if health <= 0:
+        #    print("Game lost.")
 
         pygame.display.flip()
         clock.tick(60)
