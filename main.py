@@ -321,6 +321,9 @@ def main():
     for i in range(11):
         board.append([int(x) for x in board_file.readline().strip().split(",")])
     
+    for i in range(len(board)):
+        print(board[i])
+    
     home_base = board_file.readline().strip().split(",")
     enemy_spawn = board_file.readline().strip().split(",")
         
@@ -336,7 +339,7 @@ def main():
     
     home_base_coords, enemy_spawn_coords = get_base_enemy_coords(home_base, enemy_spawn)
 
-    # Adjust first and last waypoints
+    # Adjust first and last waypoints of the path
     if enemy_path:
         enemy_path[0]["x"] = enemy_spawn_coords[0] + tile_size / 4
         enemy_path[0]["y"] = enemy_spawn_coords[1] + tile_size / 4
@@ -392,14 +395,12 @@ def main():
     towers = []
     
     dragging_tower = False
-    dragged_tower_index = None
     drag_sprite = None
     can_place_towers = True  # Locked during an active wave
 
     factories = []
     
     dragging_factory = False
-    dragged_factory_index = None
 
     running = True
     tile_type = ""
@@ -555,7 +556,8 @@ def main():
             can_spawn = True
             enemies_spawned = 0
             can_place_towers = True
-            current_wave += 1
+            if current_wave + 1 <= MAX_WAVES:
+                current_wave += 1
 
         # Update all enemies and remove those that reached the end
         for enemy in enemies[:]:
@@ -570,6 +572,7 @@ def main():
         # Draw tiled board
         draw_board(screen, board)
         
+        # Highlight the board tile at mouse position
         if (mouse_pos[0] >= board_x and mouse_pos[0] <= board_x + board_size) and (mouse_pos[1] >= board_y and mouse_pos[1] <= board_y + board_size):
             if board[(mouse_pos[1] - board_y) // tile_size][(mouse_pos[0] - board_x) // tile_size] == 1:
                 pygame.draw.rect(screen, (0, 0, 0), (board_x + ((mouse_pos[0] - board_x) // tile_size) * tile_size, board_y + ((mouse_pos[1] - board_y) // tile_size) * tile_size, tile_size, tile_size))
@@ -616,7 +619,7 @@ def main():
         
         # Wave number HUD
         wave_surf = wave_font.render(f"Wave: {current_wave}/{MAX_WAVES}", True, (230,230,230))
-        screen.blit(wave_surf, (120, 32))
+        screen.blit(wave_surf, (board_x - 100, board_y + board_size + 13))
 
         # Debug: draw path waypoints
         # if enemy_path:
