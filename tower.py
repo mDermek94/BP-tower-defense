@@ -97,6 +97,9 @@ class Tower:
         self.sprite = None
         self.sprite_size = 1
         
+        if self.type == 1:
+            self.shot_cooldown = 600
+        
         # Load and scale sprite
         if self.sprite is None:
             try:

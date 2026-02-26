@@ -41,7 +41,7 @@ tower_tile_color_a = (72, 209, 56)  # Tower tile 1
 tower_tile_color_b = (42, 115, 33)  # Tower tile 2
 path_tile_color = (227, 189, 0)     # Path tile
 
-CURRENT_BOARD_FILE = "board_test_2.txt"
+CURRENT_BOARD_FILE = "board_test_random.txt"
 CURRENT_WAVE_FILE = "wave_test_1.txt"
 
 KILL_REWARD = 1.0
@@ -66,9 +66,9 @@ def get_tile_center(col: int, row: int):
 
 def draw_tower_inventory(surface: pygame.Surface, tower_sprites: list, mouse_pos: tuple):
 
-    panel_x = board_x + board_size + 20
+    panel_x = board_x + board_size + 40
     panel_y = board_y
-    panel_width = screen_width - panel_x - 20
+    panel_width = screen_width - panel_x - 10
     panel_height = board_size
     
     pygame.draw.rect(surface, ui_panel_color, (panel_x, panel_y, panel_width, panel_height))
@@ -98,9 +98,9 @@ def draw_tower_inventory(surface: pygame.Surface, tower_sprites: list, mouse_pos
     return clickable_areas
 
 def draw_factory_inventory(surface: pygame.Surface, factory_sprites: list, mouse_pos: tuple):
-    panel_x = board_x + board_size + 20
+    panel_x = board_x + board_size + 40
     panel_y = board_y + board_size / 2
-    panel_width = screen_width - panel_x - 20
+    panel_width = screen_width - panel_x - 10
     
     pygame.draw.line(surface, (100, 100, 100), (panel_x, panel_y), (panel_x + panel_width, panel_y), 3)
 
@@ -447,7 +447,6 @@ def main():
                     for box_rect, factory_index in factory_inventory_areas:
                         if box_rect.collidepoint(click_pos):
                             dragging_factory = True
-                            dragged_factory_index = factory_index
                             if factory_index < len(factory_sprites) and factory_sprites[factory_index] is not None:
                                 original = pygame.image.load(f"Sprites/Factories/Factory-#{factory_index + 1}.png")
                                 drag_sprite = pygame.transform.scale(original, (tile_size, tile_size))
@@ -519,7 +518,6 @@ def main():
                                 print(f"Cannot place factory on tile ({tile_x}, {tile_y}) - invalid tile type")
                     
                     dragging_factory = False
-                    dragged_factory_index = None
                     drag_sprite = None
                         
                 
@@ -571,12 +569,6 @@ def main():
 
         # Draw tiled board
         draw_board(screen, board)
-        
-        # Highlight the board tile at mouse position
-        if (mouse_pos[0] >= board_x and mouse_pos[0] <= board_x + board_size) and (mouse_pos[1] >= board_y and mouse_pos[1] <= board_y + board_size):
-            if board[(mouse_pos[1] - board_y) // tile_size][(mouse_pos[0] - board_x) // tile_size] == 1:
-                pygame.draw.rect(screen, (0, 0, 0), (board_x + ((mouse_pos[0] - board_x) // tile_size) * tile_size, board_y + ((mouse_pos[1] - board_y) // tile_size) * tile_size, tile_size, tile_size))
-                pygame.draw.rect(screen, (255, 0, 0), ((board_x + ((mouse_pos[0] - board_x) // tile_size) * tile_size) + 1, (board_y + ((mouse_pos[1] - board_y) // tile_size) * tile_size) + 1, tile_size-1, tile_size-1))
 
         # Draw a thin border around the board
         pygame.draw.rect(screen, board_color, (board_x, board_y, board_size, board_size), 2)
@@ -588,6 +580,11 @@ def main():
         # Draw the enemy spawn
         pygame.draw.rect(screen, (255, 255, 255), (enemy_spawn_coords[0], enemy_spawn_coords[1], tile_size / 2, tile_size / 2))
         pygame.draw.rect(screen, (255, 0, 255), (enemy_spawn_coords[0]+1, enemy_spawn_coords[1]+1, tile_size / 2 - 2, tile_size / 2 - 2))
+
+        # Highlight the board tile at mouse position if it is a tower tile
+        if (mouse_pos[0] >= board_x and mouse_pos[0] <= board_x + board_size) and (mouse_pos[1] >= board_y and mouse_pos[1] <= board_y + board_size):
+            if board[(mouse_pos[1] - board_y) // tile_size][(mouse_pos[0] - board_x) // tile_size] == 1:
+                pygame.draw.rect(screen, (255, 0, 0), ((board_x + ((mouse_pos[0] - board_x) // tile_size) * tile_size) + 1, (board_y + ((mouse_pos[1] - board_y) // tile_size) * tile_size) + 1, tile_size-1, tile_size-1), 2)
 
         # Draw Play button
         play_btn_rect = pygame.Rect(board_x, board_y + board_size + 6, 120, 32)
@@ -605,13 +602,13 @@ def main():
         label_surf = button_font.render(btn_label, True, (0, 0, 0))
         label_rect = label_surf.get_rect(center=play_btn_rect.center)
         screen.blit(label_surf, label_rect)
-        # Money HUD
-        money_surf = money_font.render(f"Money: {money}", True, (230,230,230))
-        screen.blit(money_surf, (10, 10))
-        
         # Health HUD
         health_surf = health_font.render(f"Health: {health}", True, (230,230,230))
-        screen.blit(health_surf, (10, 35))
+        screen.blit(health_surf, (10, 10))
+        
+        # Money HUD
+        money_surf = money_font.render(f"Money: {money}", True, (230,230,230))
+        screen.blit(money_surf, (10, 35))
         
         # Resource HUD
         resource_1_surf = resource_1_font.render(f"Resource #1: {resource_1}", True, (230, 230, 230))
