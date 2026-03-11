@@ -58,7 +58,7 @@ STARTING_RESOURCE_1 = 5
 
 ENEMY_SPAWN_INTERVAL = 0.5
 
-DEBUG_WAYPOINTS = False
+DEBUG_WAYPOINTS = True
 
 def get_tile_center(col: int, row: int):
     cx = board_x + col * tile_size + tile_size / 2
@@ -693,7 +693,7 @@ def main():
                 continue
 
             # Remove bullets that leave the screen
-            if bullet.x < 0 or bullet.x > screen_width or bullet.y < 0 or bullet.y > screen_height:
+            if (bullet.x < 0 or bullet.x > screen_width or bullet.y < 0 or bullet.y > screen_height) or can_place_towers:
                 bullets.remove(bullet)
                 continue
 

@@ -78,11 +78,11 @@ class Bullet:
     
     def draw(self, surface: pygame.Surface, size: float = 2.0):
         if self.type == 0:
-            color = (20, 20, 20)
+            color = (98, 96, 255)
         elif self.type == 1:
-            color = (20, 0, 0)
+            color = (255, 96, 96)
         elif self.type == 2:
-            color = (0, 20, 0)
+            color = (0, 255, 0)
         pygame.draw.circle(surface, color, (int(self.x), int(self.y)), size)
         
 
@@ -155,14 +155,14 @@ class Tower:
         
         bullet.get_target(target)
         
-        if bullet.reached_target:
-            bullet.target_x = target.x
-            bullet.target_y = target.y
-            dx = target.x - self.x
-            dy = target.y - self.y
-            dist = sqrt(dx*dx + dy*dy) or 1.0
-            bullet.facing = (dx/dist, dy/dist)
-            bullet.reached_target = False
+        # if bullet.reached_target:
+        #     bullet.target_x = target.x
+        #     bullet.target_y = target.y
+        #     dx = target.x - self.x
+        #     dy = target.y - self.y
+        #     dist = sqrt(dx*dx + dy*dy) or 1.0
+        #     bullet.facing = (dx/dist, dy/dist)
+        #     bullet.reached_target = False
             
         bullets.append(bullet)
         self.last_shot_time = current_time

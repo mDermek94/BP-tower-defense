@@ -302,6 +302,7 @@ def main():
                         board_debug = True
                 elif event.key == pygame.K_g:
                         path = dijkstra(random_board, enemy_spawn, home_base)
+                        board = make_board()        
                         for coords in path:
                             board[coords[1]][coords[0]] = 0
                 elif event.key == pygame.K_t:
