@@ -5,7 +5,7 @@ from typing import List
 from math import *
 
 class Bullet:
-    def __init__(self, x: float, y: float, enemy: Enemy, velocity: float = 2.0):
+    def __init__(self, x: float, y: float, enemy: Enemy, velocity: float = 2.0, type: int = 0):
         self.x = x
         self.y = y
         self.velocity = velocity
@@ -14,6 +14,7 @@ class Bullet:
         self.target_y = 0
         self.reached_target = False
         self.target = enemy
+        self.type = type
         
     def get_target(self, enemy: Enemy):
         a = pow(enemy.velocity, 2) - pow(self.velocity, 2)
@@ -76,7 +77,13 @@ class Bullet:
             self.reached_target = True
     
     def draw(self, surface: pygame.Surface, size: float = 2.0):
-        pygame.draw.circle(surface, (20, 20, 20), (int(self.x), int(self.y)), size)
+        if self.type == 0:
+            color = (20, 20, 20)
+        elif self.type == 1:
+            color = (20, 0, 0)
+        elif self.type == 2:
+            color = (0, 20, 0)
+        pygame.draw.circle(surface, color, (int(self.x), int(self.y)), size)
         
 
 class Tower:
@@ -144,7 +151,7 @@ class Tower:
         if target is None:
             return
         
-        bullet = Bullet(self.x, self.y, target, velocity=self.bullet_speed)
+        bullet = Bullet(self.x, self.y, target, velocity=self.bullet_speed, type=self.type)
         
         bullet.get_target(target)
         

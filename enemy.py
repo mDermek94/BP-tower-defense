@@ -22,7 +22,7 @@ class Enemy:
             self.velocity = 4.0
             self.color = (100, 255, 100)
         
-        self.reward = 1
+        self.reward = 1 + 1 * self.type
         self.damage = 10
         
         self.path = []

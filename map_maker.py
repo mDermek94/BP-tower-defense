@@ -3,8 +3,6 @@ import pygame
 import random
 import heapq
 
-print("Hello World")
-
 # Window size
 screen_width = 1000
 screen_height = 800

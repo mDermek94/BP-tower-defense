@@ -33,6 +33,7 @@ class Factory:
             
     def produce(self, current_time: float, wave_active: bool) -> int:
         if not wave_active:
+            self.last_production_time_ms = current_time
             return 0
         if current_time - self.last_production_time_ms >= self.production_interval_ms:
             self.last_production_time_ms = current_time

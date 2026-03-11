@@ -29,6 +29,8 @@ board_size = tile_size * tile_count
 board_x = (screen_width - board_size) // 2
 board_y = (screen_height - board_size) // 2
 
+play_button_x = board_x - 135
+
 # Colors
 bg_color = (40, 40, 40)             # Window background
 board_color = (0, 0, 0)             # Board background
@@ -52,11 +54,11 @@ TOWER_COST = 5
 STARTING_HEALTH = 100
 
 STARTING_MONEY = 10
-STARTING_RESOURCE_1 = 0
+STARTING_RESOURCE_1 = 5
 
 ENEMY_SPAWN_INTERVAL = 0.5
 
-MAX_WAVES = 8
+DEBUG_WAYPOINTS = False
 
 def get_tile_center(col: int, row: int):
     cx = board_x + col * tile_size + tile_size / 2
@@ -202,7 +204,7 @@ def build_enemy_path(board: list, enemy_spawn: list, home_base: list):
         current_tile = (current_tile[0] + dy, current_tile[1] + dx)
         visited_tiles.add(current_tile)
 
-
+    #print("Waypoints: ", waypoints)
     return waypoints
 
 
@@ -341,11 +343,29 @@ def main():
 
     # Adjust first and last waypoints of the path
     if enemy_path:
-        enemy_path[0]["x"] = enemy_spawn_coords[0] + tile_size / 4
-        enemy_path[0]["y"] = enemy_spawn_coords[1] + tile_size / 4
+        # 0
+        enemy_spawn_x = enemy_spawn_coords[0] + tile_size / 4
+        enemy_spawn_y = enemy_spawn_coords[1] + tile_size / 4
+        if enemy_spawn[0] == 0: enemy_dir = 'right'
+        if enemy_spawn[0] == 9: enemy_dir = 'left'
+        if enemy_spawn[1] == 0: enemy_dir = 'down'
+        if enemy_spawn[1] == 9: enemy_dir = 'up'
         
-        enemy_path[-1]["x"] = home_base_coords[0] + tile_size / 4
-        enemy_path[-1]["y"] = home_base_coords[1] + tile_size / 4
+        enemy_path.insert(0, {"x": enemy_spawn_x, "y": enemy_spawn_y, "dir": enemy_dir})
+        
+        # -1
+        home_base_x = home_base_coords[0] + tile_size / 4
+        home_base_y = home_base_coords[1] + tile_size / 4
+        
+        if home_base[0] == 0: home_dir = 'left'
+        if home_base[0] == 9: home_dir = 'right'
+        if home_base[1] == 0: home_dir = 'up'
+        if home_base[1] == 9: home_dir = 'down'
+        
+        enemy_path[-1]["dir"] = home_dir
+        
+        enemy_path.append({"x": home_base_x, "y": home_base_y, "dir": home_dir})
+        print(enemy_path)
 
     bullets = []
 
@@ -417,7 +437,7 @@ def main():
                 click_pos = list(pygame.mouse.get_pos())
                 
                 # Play button: bottom-left next to the board
-                play_btn_rect = pygame.Rect(board_x, board_y + board_size + 6, 120, 32)
+                play_btn_rect = pygame.Rect(play_button_x, board_y + board_size + 6, 120, 32)
                 if play_btn_rect.collidepoint(click_pos) and can_spawn:
                     # Start or restart the 5-enemy spawn sequence
                     can_spawn = False
@@ -587,7 +607,7 @@ def main():
                 pygame.draw.rect(screen, (255, 0, 0), ((board_x + ((mouse_pos[0] - board_x) // tile_size) * tile_size) + 1, (board_y + ((mouse_pos[1] - board_y) // tile_size) * tile_size) + 1, tile_size-1, tile_size-1), 2)
 
         # Draw Play button
-        play_btn_rect = pygame.Rect(board_x, board_y + board_size + 6, 120, 32)
+        play_btn_rect = pygame.Rect(play_button_x, board_y + board_size + 6, 120, 32)
     
         # Determine button state/color/label
         if spawn_started:
@@ -616,17 +636,18 @@ def main():
         
         # Wave number HUD
         wave_surf = wave_font.render(f"Wave: {current_wave}/{MAX_WAVES}", True, (230,230,230))
-        screen.blit(wave_surf, (board_x - 100, board_y + board_size + 13))
+        screen.blit(wave_surf, (play_button_x + 25, board_y + board_size - 25))
 
         # Debug: draw path waypoints
-        # if enemy_path:
-        #     last_point = None
-        #     for wp in enemy_path:
-        #         p = (int(wp["x"]), int(wp["y"]))
-        #         pygame.draw.circle(screen, (0, 255, 255), p, max(2, tile_size // 8))
-        #         if last_point is not None:
-        #             pygame.draw.line(screen, (0, 200, 200), last_point, p, 2)
-        #         last_point = p
+        if DEBUG_WAYPOINTS:
+            if enemy_path:
+                last_point = None
+                for wp in enemy_path:
+                    p = (int(wp["x"]), int(wp["y"]))
+                    pygame.draw.circle(screen, (0, 255, 255), p, max(2, tile_size // 8))
+                    if last_point is not None:
+                        pygame.draw.line(screen, (0, 200, 200), last_point, p, 2)
+                    last_point = p
 
         # Draw tower inventory panel and get clickable areas
         tower_inventory_areas = draw_tower_inventory(screen, tower_sprites, mouse_pos)
@@ -638,7 +659,8 @@ def main():
         for tower in towers:
             tower.update(current_time_ms, enemies, bullets)
             tower.draw(screen)
-            
+        
+        # Draw all factories
         for factory in factories:
             resource_1 += factory.produce(current_time_ms, not can_place_towers)
             factory.draw(screen)
@@ -652,6 +674,7 @@ def main():
             bullet_size = 4
             bullet_rect = pygame.Rect(int(bullet.x - bullet_size / 2), int(bullet.y - bullet_size / 2), bullet_size, bullet_size)
 
+            # Check enemy hit
             hit_enemy = None
             for enemy in enemies:
                 # Enemy bounding box
@@ -661,9 +684,11 @@ def main():
                     hit_enemy = enemy
                     break
 
+            # Remove bullet and hit enemy and add resource
             if hit_enemy:
-                money += getattr(hit_enemy, 'reward', 1)
-                enemies.remove(hit_enemy)
+                if hit_enemy.type <= bullet.type:
+                    money += getattr(hit_enemy, 'reward', 1)
+                    enemies.remove(hit_enemy)
                 bullets.remove(bullet)
                 continue
 
