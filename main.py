@@ -129,86 +129,39 @@ def draw_factory_inventory(surface: pygame.Surface, factory_sprites: list, mouse
         clickable_areas.append((box_rect, i))
         
     return clickable_areas
-        
+
 def build_enemy_path(board: list, enemy_spawn: list, home_base: list):
-
-    total_rows = len(board)
-    total_cols = len(board[0]) if total_rows else 0
+    current = (enemy_spawn[0], enemy_spawn[1])
+    goal = (home_base[0], home_base[1])
     
-    rows_p = total_rows - 1
-    cols_p = total_cols - 1 if total_rows else 0
-    if rows_p <= 0 or cols_p <= 0:
-        return []
-
-    
-    start_x, start_y = int(enemy_spawn[0]), int(enemy_spawn[1])
-    end_x, end_y = int(home_base[0]), int(home_base[1])
-
-
-    current_tile = (start_y, start_x)
-    visited_tiles = set([current_tile])
-
-    def neighbors(rc):
-        row, col = rc
-        for dy, dx, dname in ((0, 1, "right"), (1, 0, "down"), (0, -1, "left"), (-1, 0, "up")):
-            new_row, new_col = row + dy, col + dx
-            if 0 <= new_row < rows_p and 0 <= new_col < cols_p and board[new_row][new_col] == 0 and (new_row, new_col) not in visited_tiles:
-                yield (new_row, new_col, dy, dx, dname)
-
-    initial = None
-    for new_row, new_col, dy, dx, dname in neighbors(current_tile):
-        initial = (dy, dx, dname)
-        break
-    if initial is None:
-        return []
-
-    dy, dx, dname = initial
-    prev = None
     waypoints = []
-
-    scx, scy = get_tile_center(current_tile[1], current_tile[0])
-    waypoints.append({"x": scx, "y": scy, "dir": dname})
-
-
-    while True:
-        new_row, new_col = current_tile[0] + dy, current_tile[1] + dx
-        can_forward = 0 <= new_row < rows_p and 0 <= new_col < cols_p and board[new_row][new_col] == 0 and (new_row, new_col) != prev and (new_row, new_col) not in visited_tiles
-
-        if can_forward:
-            prev = current_tile
-            current_tile = (new_row, new_col)
-            visited_tiles.add(current_tile)
-
-            if current_tile == (end_y, end_x):
-                current_x, current_y = get_tile_center(current_tile[1], current_tile[0])
-                waypoints.append({"x": current_x, "y": current_y, "dir": None})
-                break
-            continue
-
-
-        turn_found = None
-        for turn_row, turn_col, turn_dy, turn_dx, turn_dname in neighbors(current_tile):
-            if (turn_row, turn_col) != prev and (turn_dy, turn_dx) != (dy, dx):
-                turn_found = (turn_dy, turn_dx, turn_dname)
-                break
-
-        current_x, current_y = get_tile_center(current_tile[1], current_tile[0])
-        next_dir_name = turn_found[2] if turn_found else None
-        waypoints.append({"x": current_x, "y": current_y, "dir": next_dir_name})
-
-        if turn_found is None:
-            break
-
-        dy, dx, dname = turn_found
-        prev = current_tile
-        current_tile = (current_tile[0] + dy, current_tile[1] + dx)
-        visited_tiles.add(current_tile)
-
-    #print("Waypoints: ", waypoints)
+    directions = ((0, -1, "up"), (-1, 0, "left"), (0, 1, "down"), (1, 0, "right"))
+    visited = []
+    prev_dir = None
+    
+    while (current != goal):
+        for dir in directions:
+            next = (current[0] + dir[0], current[1] + dir[1])
+            dir_name = dir[2]
+            if (next[0] >= 0 and next[0] <= 9 and next[1] >= 0 and next[1] <= 9):
+                if board[next[1]][next[0]] == 0:
+                    if next not in visited:
+                        visited.append(current)                       
+                        if prev_dir != dir_name:
+                            current_x, current_y = get_tile_center(current[0], current[1])
+                            waypoints.append({"x": current_x, "y": current_y, "dir": dir_name})
+                        current = next
+                        prev_dir = dir_name
+                        break
+                    
+    current_x, current_y = get_tile_center(goal[0], goal[1])
+    waypoints.append({"x": current_x, "y": current_y, "dir": None})
+    
+    #print("Waypoints:", waypoints)
     return waypoints
+                
 
-
-def build_enemy_waves():    
+def build_enemy_waves():
     waves = []
 
     with open(CURRENT_WAVE_FILE, "r") as file:
@@ -335,7 +288,7 @@ def main():
 
     # Build enemy path
     enemy_path = build_enemy_path(board, enemy_spawn, home_base)
-    
+        
     enemy_waves = build_enemy_waves()
     MAX_WAVES = len(enemy_waves)
     
@@ -357,10 +310,10 @@ def main():
         home_base_x = home_base_coords[0] + tile_size / 4
         home_base_y = home_base_coords[1] + tile_size / 4
         
-        if home_base[0] == 0: home_dir = 'left'
-        if home_base[0] == 9: home_dir = 'right'
         if home_base[1] == 0: home_dir = 'up'
         if home_base[1] == 9: home_dir = 'down'
+        if home_base[0] == 0: home_dir = 'left'
+        if home_base[0] == 9: home_dir = 'right'
         
         enemy_path[-1]["dir"] = home_dir
         
@@ -546,7 +499,7 @@ def main():
                     map_x = (click_pos[0] - board_x) // tile_size
                     map_y = (click_pos[1] - board_y) // tile_size
                     if map_x < len(board) - 1 and map_y < len(board) - 1:
-                        print(f"x: {map_x}, y: {map_y}")
+                        print(f"x: {map_x}, y: {map_y}, {get_tile_center(map_x, map_y)}")
                         if board[map_y][map_x] == 1:
                             tile_type = "tower"
                             print(tile_type)

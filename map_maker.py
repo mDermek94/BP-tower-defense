@@ -311,9 +311,9 @@ def main():
                     home_base, enemy_spawn = choose_random_start_end()
                     home_base_coords, enemy_spawn_coords = get_base_enemy_coords(home_base, enemy_spawn)
             elif event.type == pygame.MOUSEBUTTONDOWN:
+                click_pos = list(pygame.mouse.get_pos())
                 # Left-mouse button
                 if (pygame.mouse.get_pressed(num_buttons=3) == (1, 0 ,0)):
-                    click_pos = list(pygame.mouse.get_pos())
                     if (click_pos[0] >= board_x and click_pos[0] <= board_x + board_size) and (click_pos[1] >= board_y and click_pos[1] <= board_y + board_size):
                         map_x = (click_pos[0] - board_x) // tile_size
                         map_y = (click_pos[1] - board_y) // tile_size
