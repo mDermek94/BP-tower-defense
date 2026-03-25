@@ -210,3 +210,4 @@ __marimo__/
 agent.py
 agent_test.py
 board_test_random.txt
+wave_test_random.txt

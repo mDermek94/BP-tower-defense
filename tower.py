@@ -82,7 +82,7 @@ class Bullet:
         elif self.type == 1:
             color = (255, 96, 96)
         elif self.type == 2:
-            color = (0, 255, 0)
+            color = (255, 253, 123)
         pygame.draw.circle(surface, color, (int(self.x), int(self.y)), size)
         
 
@@ -106,6 +106,9 @@ class Tower:
         
         if self.type == 1:
             self.shot_cooldown = 600
+        elif self.type == 2:
+            self.shot_cooldown = 600
+            self.price = 10
         
         # Load and scale sprite
         if self.sprite is None:

@@ -44,7 +44,7 @@ tower_tile_color_b = (42, 115, 33)  # Tower tile 2
 path_tile_color = (227, 189, 0)     # Path tile
 
 CURRENT_BOARD_FILE = "board_test_random.txt"
-CURRENT_WAVE_FILE = "wave_test_1.txt"
+CURRENT_WAVE_FILE = "wave_test_random.txt"
 
 KILL_REWARD = 1.0
 HEALTH_PENALTY = 1.0
@@ -55,10 +55,11 @@ STARTING_HEALTH = 100
 
 STARTING_MONEY = 10
 STARTING_RESOURCE_1 = 5
+STARTING_RESOURCE_2 = 10
 
 ENEMY_SPAWN_INTERVAL = 0.5
 
-DEBUG_WAYPOINTS = True
+DEBUG_WAYPOINTS = False
 
 def get_tile_center(col: int, row: int):
     cx = board_x + col * tile_size + tile_size / 2
@@ -270,6 +271,7 @@ def main():
     money = STARTING_MONEY
     health = STARTING_HEALTH
     resource_1 = STARTING_RESOURCE_1
+    resource_2 = STARTING_RESOURCE_2
     
     current_wave = 1
     
@@ -318,7 +320,6 @@ def main():
         enemy_path[-1]["dir"] = home_dir
         
         enemy_path.append({"x": home_base_x, "y": home_base_y, "dir": home_dir})
-        print(enemy_path)
 
     bullets = []
 
@@ -336,7 +337,7 @@ def main():
     button_font = pygame.font.SysFont(None, 24)
     money_font = pygame.font.SysFont(None, 26)
     health_font = pygame.font.SysFont(None, 26)
-    resource_1_font = pygame.font.SysFont(None, 26)
+    resource_font = pygame.font.SysFont(None, 26)
     wave_font = pygame.font.SysFont(None, 26)
 
     tower_sprites = []
@@ -350,6 +351,11 @@ def main():
         # Scale sprite
         tower_sprite_2 = pygame.transform.scale(tower_sprite_2, (60, 60))
         tower_sprites.append(tower_sprite_2)
+        
+        tower_sprite_3 = pygame.image.load("Sprites/Towers/Tower-#3.png")
+        # Scale sprite
+        tower_sprite_3 = pygame.transform.scale(tower_sprite_3, (60, 60))
+        tower_sprites.append(tower_sprite_3)
     except pygame.error as e:
         print(f"Could not load tower sprite: {e}")
         tower_sprites.append(None)
@@ -409,7 +415,6 @@ def main():
                     for box_rect, tower_index in tower_inventory_areas:
                         if box_rect.collidepoint(click_pos):
                             dragging_tower = True
-                            dragged_tower_index = tower_index
                             if tower_index < len(tower_sprites) and tower_sprites[tower_index] is not None:
                                 original = pygame.image.load(f"Sprites/Towers/Tower-#{tower_index + 1}.png")
                                 drag_sprite = pygame.transform.scale(original, (tile_size, tile_size))
@@ -448,7 +453,7 @@ def main():
                                 # Mark tile as occupied
                                 board[tile_y][tile_x] = 2
                                 print(f"Placed tower at tile ({tile_x}, {tile_y})")
-                            elif money < 5 and (tower_index == 0 or tower_index == 1):
+                            elif (money < 5 and (tower_index == 0 or tower_index == 1)) or (money < 10 and tower_index == 2):
                                 print(f"Not enough money to place tower. Money: {money}")
                             elif board[tile_y][tile_x] == 1 and money >= 5 and resource_1 >= 5 and tower_index == 1:
                                 # Place tower
@@ -460,14 +465,25 @@ def main():
                                 # Mark tile as occupied
                                 board[tile_y][tile_x] = 2
                                 print(f"Placed tower at tile ({tile_x}, {tile_y})")
+                            elif board[tile_y][tile_x] == 1 and money >= 10 and resource_2 >= 10 and tower_index == 2:
+                                # Place tower
+                                tower_center_x, tower_center_y = get_tile_center(tile_x, tile_y)
+                                new_tower = Tower(tower_center_x, tower_center_y, health=100, tile_size=tile_size, type=tower_index)
+                                money -= new_tower.price
+                                resource_2 -= new_tower.price
+                                towers.append(new_tower)
+                                # Mark tile as occupied
+                                board[tile_y][tile_x] = 2
+                                print(f"Placed tower at tile ({tile_x}, {tile_y})")
                             elif tower_index == 1 and resource_1 < 5:
+                                print(f"Not enough resource_1 to place tower. Resource_1: {resource_1}")
+                            elif tower_index == 2 and resource_2 < 10:
                                 print(f"Not enough resource_1 to place tower. Resource_1: {resource_1}")
                             else:
                                 print(f"Cannot place tower on tile ({tile_x}, {tile_y}) - invalid tile type")
                     
                     # Reset drag state
                     dragging_tower = False
-                    dragged_tower_index = None
                     drag_sprite = None
                     
                 if dragging_factory:
@@ -580,12 +596,15 @@ def main():
         screen.blit(health_surf, (10, 10))
         
         # Money HUD
-        money_surf = money_font.render(f"Money: {money}", True, (230,230,230))
+        money_surf = money_font.render(f"Money: {money}", True, (230, 230, 230))
         screen.blit(money_surf, (10, 35))
         
         # Resource HUD
-        resource_1_surf = resource_1_font.render(f"Resource #1: {resource_1}", True, (230, 230, 230))
+        resource_1_surf = resource_font.render(f"Resource #1: {resource_1}", True, (230, 230, 230))
         screen.blit(resource_1_surf, (10, 60))
+        
+        resource_2_surf = resource_font.render(f"Resource #2: {resource_2}", True, (230, 230, 230))
+        screen.blit(resource_2_surf, (10, 85))
         
         # Wave number HUD
         wave_surf = wave_font.render(f"Wave: {current_wave}/{MAX_WAVES}", True, (230,230,230))
