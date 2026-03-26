@@ -278,6 +278,7 @@ def main():
     random_board = make_random_board()
     board = make_board()
     
+    spawn_switcher = True
     
     home_base, enemy_spawn = choose_random_start_end()
 
@@ -292,20 +293,25 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
+                    # Quit the game
                     running = False
                 elif event.key == pygame.K_s:
+                    # Save board into a .txt
                     save_board(board, home_base, enemy_spawn)
                 elif event.key == pygame.K_b:
-                    if board_debug == True:
-                        board_debug = False
-                    elif board_debug == False:
-                        board_debug = True
+                    # Show board weights debug
+                    board_debug = not board_debug
                 elif event.key == pygame.K_g:
-                        path = dijkstra(random_board, enemy_spawn, home_base)
-                        board = make_board()        
-                        for coords in path:
-                            board[coords[1]][coords[0]] = 0
+                    # Generate path
+                    path = dijkstra(random_board, enemy_spawn, home_base)
+                    board = make_board()        
+                    for coords in path:
+                        board[coords[1]][coords[0]] = 0
+                elif event.key == pygame.K_c:
+                    # Clear the board
+                    board = make_board()
                 elif event.key == pygame.K_t:
+                    # Generate new random start and end positions
                     board = make_board()
                     random_board = make_random_board()
                     home_base, enemy_spawn = choose_random_start_end()
@@ -313,7 +319,7 @@ def main():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 click_pos = list(pygame.mouse.get_pos())
                 # Left-mouse button
-                if (pygame.mouse.get_pressed(num_buttons=3) == (1, 0 ,0)):
+                if (pygame.mouse.get_pressed(num_buttons=3) == (1, 0, 0)):
                     if (click_pos[0] >= board_x and click_pos[0] <= board_x + board_size) and (click_pos[1] >= board_y and click_pos[1] <= board_y + board_size):
                         map_x = (click_pos[0] - board_x) // tile_size
                         map_y = (click_pos[1] - board_y) // tile_size
@@ -324,6 +330,23 @@ def main():
                             elif board[map_y][map_x] == 0:
                                 board[map_y][map_x] = 1
                                 random_board[map_y][map_x] = random.uniform(0, BOARD_MAX_RANDOM)
+                elif (pygame.mouse.get_pressed(num_buttons=3) == (0, 0, 1)):
+                    if (click_pos[0] >= board_x and click_pos[0] <= board_x + board_size) and (click_pos[1] >= board_y and click_pos[1] <= board_y + board_size):
+                        map_x = (click_pos[0] - board_x) // tile_size
+                        map_y = (click_pos[1] - board_y) // tile_size
+                        if map_x < len(board) - 1 and map_y < len(board) - 1:
+                            if map_x in (0, 9) or map_y in (0, 9):
+                                if (map_x, map_y) == home_base or (map_x, map_y) == enemy_spawn:
+                                    temp = home_base
+                                    home_base = enemy_spawn
+                                    enemy_spawn = temp
+                                else:
+                                    if spawn_switcher:
+                                        home_base = (map_x, map_y)
+                                    else:
+                                        enemy_spawn = (map_x, map_y)
+                                    spawn_switcher = not spawn_switcher
+                                home_base_coords, enemy_spawn_coords = get_base_enemy_coords(home_base, enemy_spawn)
             elif event.type == pygame.MOUSEBUTTONUP:
                 # Board debug - print board x, y and tile type at mouse position
                 if (click_pos[0] >= board_x and click_pos[0] <= board_x + board_size) and (click_pos[1] >= board_y and click_pos[1] <= board_y + board_size):
