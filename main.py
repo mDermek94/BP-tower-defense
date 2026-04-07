@@ -49,13 +49,27 @@ CURRENT_WAVE_FILE = "wave_test_random.txt"
 KILL_REWARD = 1.0
 HEALTH_PENALTY = 1.0
 
-TOWER_COST = 5
+# Tower costs
+TOWER0_COST_MONEY = 5
+
+TOWER1_COST_MONEY = 5
+TOWER1_COST_RESOURCE_1 = 5
+
+TOWER2_COST_MONEY = 10
+TOWER2_COST_RESOURCE_1 = 0
+TOWER2_COST_RESOURCE_2 = 10
+
+# Factory costs
+FACTORY0_COST_MONEY = 5
+
+FACTORY1_COST_MONEY = 10
+FACTORY1_COST_RESOURCE_1 = 10
 
 STARTING_HEALTH = 100
 
-STARTING_MONEY = 10
-STARTING_RESOURCE_1 = 5
-STARTING_RESOURCE_2 = 10
+STARTING_MONEY = 100
+STARTING_RESOURCE_1 = 100
+STARTING_RESOURCE_2 = 100
 
 ENEMY_SPAWN_INTERVAL = 0.5
 
@@ -366,6 +380,11 @@ def main():
         # Scale sprite
         factory_sprite_1 = pygame.transform.scale(factory_sprite_1, (60, 60))
         factory_sprites.append(factory_sprite_1)
+        
+        factory_sprite_2 = pygame.image.load("Sprites/Factories/Factory-#2.png")
+        # Scale sprite
+        factory_sprite_2 = pygame.transform.scale(factory_sprite_2, (60, 60))
+        factory_sprites.append(factory_sprite_2)
     except pygame.error as e:
         print(f"Could not load factory sprite: {e}")
         factory_sprites.append(None)
@@ -444,33 +463,35 @@ def main():
                         
                         # Check if tile is valid
                         if tile_x < len(board[0]) - 1 and tile_y < len(board) - 1:
-                            if board[tile_y][tile_x] == 1 and money >= 5 and tower_index == 0:
-                                # Place tower
+                            # Tower placement
+                            if board[tile_y][tile_x] == 1 and money >= TOWER0_COST_MONEY and tower_index == 0:
+                                # Place tower 0
                                 tower_center_x, tower_center_y = get_tile_center(tile_x, tile_y)
                                 new_tower = Tower(tower_center_x, tower_center_y, health=100, tile_size=tile_size)
-                                money -= new_tower.price
+                                money -= TOWER0_COST_MONEY
                                 towers.append(new_tower)
                                 # Mark tile as occupied
                                 board[tile_y][tile_x] = 2
                                 print(f"Placed tower at tile ({tile_x}, {tile_y})")
-                            elif (money < 5 and (tower_index == 0 or tower_index == 1)) or (money < 10 and tower_index == 2):
+                            elif (money < TOWER0_COST_MONEY and tower_index == 0) or (money < TOWER1_COST_MONEY and tower_index == 1) or (money < TOWER2_COST_MONEY and tower_index == 2):
                                 print(f"Not enough money to place tower. Money: {money}")
-                            elif board[tile_y][tile_x] == 1 and money >= 5 and resource_1 >= 5 and tower_index == 1:
-                                # Place tower
+                            elif board[tile_y][tile_x] == 1 and money >= TOWER1_COST_MONEY and resource_1 >= TOWER1_COST_RESOURCE_1 and tower_index == 1:
+                                # Place tower 1
                                 tower_center_x, tower_center_y = get_tile_center(tile_x, tile_y)
                                 new_tower = Tower(tower_center_x, tower_center_y, health=100, tile_size=tile_size, type=tower_index)
-                                money -= new_tower.price
-                                resource_1 -= new_tower.price
+                                money -= TOWER1_COST_MONEY
+                                resource_1 -= TOWER1_COST_RESOURCE_1
                                 towers.append(new_tower)
                                 # Mark tile as occupied
                                 board[tile_y][tile_x] = 2
                                 print(f"Placed tower at tile ({tile_x}, {tile_y})")
-                            elif board[tile_y][tile_x] == 1 and money >= 10 and resource_2 >= 10 and tower_index == 2:
-                                # Place tower
+                            elif board[tile_y][tile_x] == 1 and money >= TOWER2_COST_MONEY and resource_1 >= TOWER2_COST_RESOURCE_1 and resource_2 >= TOWER2_COST_RESOURCE_2 and tower_index == 2:
+                                # Place tower 2
                                 tower_center_x, tower_center_y = get_tile_center(tile_x, tile_y)
                                 new_tower = Tower(tower_center_x, tower_center_y, health=100, tile_size=tile_size, type=tower_index)
-                                money -= new_tower.price
-                                resource_2 -= new_tower.price
+                                money -= TOWER2_COST_MONEY
+                                resource_1 -= TOWER2_COST_RESOURCE_1
+                                resource_2 -= TOWER2_COST_RESOURCE_2
                                 towers.append(new_tower)
                                 # Mark tile as occupied
                                 board[tile_y][tile_x] = 2
@@ -492,17 +513,29 @@ def main():
                     if (mouse_x >= board_x and mouse_x <= board_x + board_size) and (mouse_y >= board_y and mouse_y <= board_y + board_size):
                         tile_x = (mouse_x - board_x) // tile_size
                         tile_y = (mouse_y - board_y) // tile_size
-                        
+                        # Factory placement
                         if tile_x < len(board[0]) - 1 and tile_y < len(board) - 1:
-                            if board[tile_y][tile_x] == 1 and money >= 5:
+                            # Place factory 0
+                            if board[tile_y][tile_x] == 1 and money >= FACTORY0_COST_MONEY and factory_index == 0:
                                 factory_center_x, factory_center_y = get_tile_center(tile_x, tile_y)
                                 new_factory = Factory(factory_center_x, factory_center_y, health=100, tile_size=tile_size)
-                                money -= new_factory.price
+                                money -= FACTORY0_COST_MONEY
                                 factories.append(new_factory)
                                 board[tile_y][tile_x] = 2
                                 print(f"Placed factory at tile ({tile_x}, {tile_y})")
-                            elif money <= 5:
+                            elif (money < FACTORY0_COST_MONEY and factory_index == 0) or (money < FACTORY1_COST_MONEY and factory_index == 1):
                                 print(f"Not enough money to place factory. Money: {money}")
+                            # Place factory 1
+                            elif board[tile_y][tile_x] == 1 and money >= FACTORY1_COST_MONEY and resource_1 >= FACTORY1_COST_RESOURCE_1 and factory_index == 1:
+                                factory_center_x, factory_center_y = get_tile_center(tile_x, tile_y)
+                                new_factory = Factory(factory_center_x, factory_center_y, health=100, tile_size=tile_size, type=1)
+                                money -= FACTORY1_COST_MONEY
+                                resource_1 -= FACTORY1_COST_RESOURCE_1
+                                factories.append(new_factory)
+                                board[tile_y][tile_x] = 2
+                                print(f"Placed factory at tile ({tile_x}, {tile_y})")
+                            elif factory_index == 1 and resource_1 < FACTORY1_COST_RESOURCE_1:
+                                print(f"Not enough resource 1 to place factory. Resource_1: {resource_1}, Cost: {FACTORY1_COST_RESOURCE_1}")
                             else:
                                 print(f"Cannot place factory on tile ({tile_x}, {tile_y}) - invalid tile type")
                     
@@ -627,14 +660,19 @@ def main():
         factory_inventory_areas = draw_factory_inventory(screen, factory_sprites, mouse_pos)
 
         # Draw all towers (pass milliseconds for cooldown timing)
+        # Perform tower actions
         current_time_ms = pygame.time.get_ticks()
         for tower in towers:
             tower.update(current_time_ms, enemies, bullets)
             tower.draw(screen)
         
         # Draw all factories
+        # Perform factory actions
         for factory in factories:
-            resource_1 += factory.produce(current_time_ms, not can_place_towers)
+            if factory.type == 0:
+                resource_1 += factory.produce(current_time_ms, not can_place_towers)
+            elif factory.type == 1:
+                resource_2 += factory.produce(current_time_ms, not can_place_towers)
             factory.draw(screen)
         
         # Update and draw bullets

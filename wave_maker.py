@@ -13,14 +13,15 @@ class EnemyType:
 
 ENEMIES = [
     EnemyType(type=0, cost=1.0, unlock_wave=1, base_weight=1.0),
-    EnemyType(type=1, cost=3.0, unlock_wave=4, base_weight=0.8)
+    EnemyType(type=1, cost=3.0, unlock_wave=4, base_weight=0.8),
+    EnemyType(type=2, cost=5.0, unlock_wave=7, base_weight=0.6)
 ]
 
 ENEMY_DECAY_RATE = 0.15
 
 # List of available wave archetypes
 WAVE_ARCHETYPES = [
-    "balanced",     # Balance of low and higher tier enemies
+    "balanced",     # Default - balance of low and higher tier enemies
     "swarm",        # Focus on a large number of low tier enemies
     "strong"        # Focus on a semi-large number of high tier enemies
 ]
@@ -30,13 +31,13 @@ ARCHETYPES_MIN_WAVE = 6
 MAX_WAVES = 20
 
 BASE_WAVE_BUDGET = 3
-WAVE_BUDGET_GROWTH = 1.3
-WAVE_SCALING_FACTOR = 1.1
+WAVE_BUDGET_GROWTH = 1.5
+WAVE_BUDGET_SCALING_FACTOR = 1.1
 
 def get_wave_budget(wave: int):
     # Return a difficulty budget for a wave based on wave number
     
-    return BASE_WAVE_BUDGET + (wave ** WAVE_SCALING_FACTOR) * WAVE_BUDGET_GROWTH
+    return BASE_WAVE_BUDGET + (wave ** WAVE_BUDGET_SCALING_FACTOR) * WAVE_BUDGET_GROWTH
 
 def pick_archetype(wave: int):
     # Returns a random archetype

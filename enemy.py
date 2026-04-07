@@ -9,15 +9,19 @@ class Enemy:
         self.y = y
         self.size = 8
         self.facing = (1.0, 0.0)
-        self.velocity = 3.5
+        self.velocity = 2.5
         self.color = (255, 100, 100)
         self.health = 100
         self.type = type
             
         if self.type == 1:
             self.health = 100
-            self.velocity = 4.0
+            self.velocity = 3.0
             self.color = (100, 255, 100)
+        elif self.type == 2:
+            self.health = 100
+            self.velocity = 3.5
+            self.color = (100, 100, 255)
         
         self.reward = 1 + 1 * self.type
         self.damage = 10

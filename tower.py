@@ -99,7 +99,6 @@ class Tower:
         self.shot_cooldown = 800
         self.last_shot_time = 0
         self.bullet_speed = 3.2
-        self.price = 5
         self.type = type
         self.sprite = None
         self.sprite_size = 1
@@ -107,8 +106,7 @@ class Tower:
         if self.type == 1:
             self.shot_cooldown = 600
         elif self.type == 2:
-            self.shot_cooldown = 600
-            self.price = 10
+            self.shot_cooldown = 500
         
         # Load and scale sprite
         if self.sprite is None:
