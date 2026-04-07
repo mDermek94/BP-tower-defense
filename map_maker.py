@@ -14,6 +14,8 @@ clock = pygame.time.Clock()
 
 INF = 10000000
 
+MAX_MAP_GENERATION_ATTEMPTS = 500
+
 BOARD_MAX_RANDOM = 10000 # Maximum of random value range
 WEIGHT_TUNING = 20       # Weight penalty for tiles closer to the edge
 
@@ -71,6 +73,7 @@ def draw_board(surface: pygame.Surface, board: list, debug: bool = False):
                     color = tower_tile_color_a if (row + col) % 2 == 0 else tower_tile_color_b
                 else: # Show the random values on the board
                     value = (255 / random_max) * board[row][col]
+                    if value > 255: value = 255 # Clamp value to black if it somehow gets too high
                     color = (value, value, value)
             pygame.draw.rect(surface, color, rect)
 
@@ -238,7 +241,6 @@ def dijkstra(board, source, target): # Find the lowest weight path from source t
         visited[y][x] = True # If not visited mark as visited
         
         if (x, y) == target: # If path reached target, end
-            print("Found Path!!")
             break
         
         directions = [(0, 1), (0, -1), (1, 0), (-1, 0)] # Up, down, left and right vectors
@@ -266,9 +268,117 @@ def dijkstra(board, source, target): # Find the lowest weight path from source t
     while current is not None:
         path.append(current)
         current = prev[current[1]][current[0]]
-        
+    
+    # Reverse for correct use in the path_with_waypoints function, which expects points ordered [source -> waypoint -> ... -> waypoint -> target]
+    path.reverse()
     return path
         
+def path_with_waypoints(board, source, target, waypoints):
+    # Reuse the dijkstra function for finding the shortest path between two points to add several waypoints the path is forced to pass through
+    
+    full_path = []
+    
+    # Get a list of points including the source, target and all waypoints
+    points = [source] + waypoints + [target]
+    
+    for i in range(len(points) - 1):
+        start = points[i]
+        end = points[i + 1]
+        
+        # Get a path segment using two points and the dijkstra function
+        path_segment = dijkstra(board, start, end)
+        
+        # Skip duplicate points where the segments connect (since the end point of a previous segment is going to be the same as the start point of its next segment)
+        if i > 0:
+            path_segment = path_segment[1:]
+            
+        full_path.extend(path_segment)
+        
+        for (x, y) in path_segment[1:-1]:
+            board[y][x] += INF/2
+                
+    return full_path
+
+def generate_waypoints(source, target, num_waypoints, offset_strength = 2):
+    waypoints = []
+    
+    sx, sy = source
+    ex, ey = target
+    
+    for i in range(1, num_waypoints + 1):
+        # Try to keep even spacing
+        t = i / (num_waypoints + 1)
+        
+        # Base point along a straight line from source to target
+        x = sx + (ex - sx) * t
+        y = sy + (ey - sy) * t
+        
+        # Perpendicular direction
+        dx = ex - sx
+        dy = ey - sy
+        
+        perp_x = -dy
+        perp_y = dx
+        
+        # Normalize
+        length = max((perp_x**2 + perp_y**2) ** 0.5, 0.0001) # Avoid division by zero
+        perp_x /= length
+        perp_y /= length
+        
+        # Random offset
+        offset = random.uniform(-offset_strength, offset_strength)
+        
+        x += perp_x * offset
+        y += perp_y * offset
+        
+        # Clamp to grid
+        x = int(round(max(0, min(tile_count - 1, x))))
+        y = int(round(max(0, min(tile_count - 1, y))))
+        
+        waypoints.append((x, y))
+    
+    return waypoints
+
+def count_path_neighbors(path_set, x, y):
+    directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+    count = 0
+    
+    for dx, dy in directions:
+        if (x + dx, y + dy) in path_set:
+            count += 1
+    
+    return count
+
+def validate_path(source, target, path):
+    path_set = set(path)
+    
+    for i, (x, y) in enumerate(path):
+        neighbors = count_path_neighbors(set(path), x, y)
+        
+        if source not in path or target not in path:
+            return False
+        
+        if path[i] == source or path[i] == target:
+            # Start and end tiles only have 1 neighbor
+            if neighbors != 1:
+                return False
+            
+        else:
+            # A normal path tile has 2 neighbors
+            if neighbors != 2:
+                return False
+            
+    return True
+
+def generate_valid_path(board, source, target, num_waypoints = 0, waypoint_offset_strength = 2):
+    for i in range(MAX_MAP_GENERATION_ATTEMPTS):
+        path = path_with_waypoints(board, source, target, generate_waypoints(source, target, num_waypoints, waypoint_offset_strength))
+        
+        if validate_path(source, target, path):
+            print(path)
+            return path
+        
+    return None
 
 
 def main():
@@ -303,8 +413,17 @@ def main():
                     board_debug = not board_debug
                 elif event.key == pygame.K_g:
                     # Generate path
-                    path = dijkstra(random_board, enemy_spawn, home_base)
-                    board = make_board()        
+                    random_board = make_random_board()
+                    
+                    for i in range(MAX_MAP_GENERATION_ATTEMPTS):
+                        path = generate_valid_path(random_board, enemy_spawn, home_base, num_waypoints=4)
+                        if path is None:
+                            print("Unable to generate map, regenerating map weights")
+                            random_board = make_random_board()
+                        else:
+                            break
+                        
+                    board = make_board()
                     for coords in path:
                         board[coords[1]][coords[0]] = 0
                 elif event.key == pygame.K_c:
