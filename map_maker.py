@@ -16,6 +16,17 @@ INF = 10000000
 
 MAX_MAP_GENERATION_ATTEMPTS = 500
 
+MIN_SOURCE_TARGET_DISTANCE = 2
+
+MAP_DIFFICULTY_CUTOFF = 20
+
+SEED = 0
+
+if SEED != 0:
+    random.seed(SEED)
+
+DIFFICULTY = 20
+
 BOARD_MAX_RANDOM = 10000 # Maximum of random value range
 WEIGHT_TUNING = 20       # Weight penalty for tiles closer to the edge
 
@@ -299,7 +310,9 @@ def path_with_waypoints(board, source, target, waypoints):
                 
     return full_path
 
-def generate_waypoints(source, target, num_waypoints, offset_strength = 2):
+def generate_waypoints_path(source, target, num_waypoints, offset_strength = 2):
+    # Generates semi-evenly spaced waypoints between source and target
+    
     waypoints = []
     
     sx, sy = source
@@ -339,6 +352,44 @@ def generate_waypoints(source, target, num_waypoints, offset_strength = 2):
     
     return waypoints
 
+def generate_waypoints_global(source, target, num_waypoints = 0):
+    # Generate waypoints anywhere on the map
+    
+    waypoints_set = set()
+    
+    while len(waypoints_set) < num_waypoints:
+        x = random.randint(0, tile_count - 1)
+        y = random.randint(0, tile_count - 1)
+        waypoints_set.add((x, y))
+        
+    waypoints = list(waypoints_set)
+    
+    sx, sy = source
+    ex, ey = target
+    
+    dx = ex - sx
+    dy = ey - sy
+    
+    result = sorted(
+        waypoints,
+        key=lambda wp: (wp[0] - sx) * dx + (wp[1] - sy) * dy
+    )
+    
+    print(result)
+    
+    return result
+
+def generate_waypoints(source, target, num_waypoints = 0, offset_strength = 2, mode = 0):
+    # Generate a chosen number of waypoints on the map using one of the two modes
+    #   Mode 0 - uses generate_waypoints_global()
+    #   Mode 1 - uses generate_waypoints_path()
+    
+    if mode == 0:
+        return generate_waypoints_global(source, target, num_waypoints)
+    elif mode == 1:
+        return generate_waypoints_path(source, target, num_waypoints, offset_strength)
+        
+
 def count_path_neighbors(path_set, x, y):
     directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
     count = 0
@@ -350,12 +401,13 @@ def count_path_neighbors(path_set, x, y):
     return count
 
 def validate_path(source, target, path):
+    # A valid path starts in the source and ends in the target (no extra tiles) and tiles don't bunch up - each tile has a maximum of 2 neighbors (entrance and exit to the tile)
     path_set = set(path)
     
     for i, (x, y) in enumerate(path):
-        neighbors = count_path_neighbors(set(path), x, y)
+        neighbors = count_path_neighbors(path_set, x, y)
         
-        if source not in path or target not in path:
+        if source not in path_set or target not in path_set:
             return False
         
         if path[i] == source or path[i] == target:
@@ -370,15 +422,63 @@ def validate_path(source, target, path):
             
     return True
 
-def generate_valid_path(board, source, target, num_waypoints = 0, waypoint_offset_strength = 2):
+def validate_source_target(source, target, min_dist, max_dist):
+    if max_dist is not None:
+        return max_dist >= abs(source[0] - target[0]) + abs(source[1] - target[1]) >= 2
+    else:
+        return abs(source[0] - target[0]) + abs(source[1] - target[1]) >= 2
+
+def generate_valid_path(board, source, target, num_waypoints = 0, waypoint_offset_strength = 2, waypoint_generation_mode = 0):
     for i in range(MAX_MAP_GENERATION_ATTEMPTS):
-        path = path_with_waypoints(board, source, target, generate_waypoints(source, target, num_waypoints, waypoint_offset_strength))
+        path = path_with_waypoints(board, source, target, generate_waypoints(source, target, num_waypoints, waypoint_offset_strength, waypoint_generation_mode))
         
         if validate_path(source, target, path):
             print(path)
             return path
         
     return None
+
+def count_free_tiles(board):
+    num_free_tiles = 0
+    
+    for row in board:
+        for column in board[row]:
+            if board[row][column] == 1:
+                num_free_tiles += 1
+                
+    return num_free_tiles
+
+def generate_parameters(difficulty):
+    # Generate map generation parameters based on difficulty level
+    
+    map_D = min(difficulty, MAP_DIFFICULTY_CUTOFF)
+    t = map_D / MAP_DIFFICULTY_CUTOFF
+    
+    use_global = bool(t < 0.5)
+        
+    min_len = int(25 - t * 22)
+    max_len = int(35 - t * 15)
+        
+    num_waypoints = int(5 - t * 5)
+    
+    waypoint_offset_strength = int(1 + (1 - t) * 4)
+    
+    if t < 0.4:
+        max_start_end_dist = None
+        min_start_end_dist = 10
+    else:
+        max_start_end_dist = int(20 - t * 12)
+        min_start_end_dist = 2
+    
+    return {
+        "use_global": use_global,
+        "min_path_length": min_len,
+        "max_path_length": max_len,
+        "waypoint_count": max(0, num_waypoints),
+        "waypoint_offset": waypoint_offset_strength,
+        "max_start_end_dist": max_start_end_dist,
+        "min_start_end_dist": min_start_end_dist
+    }
 
 
 def main():
@@ -416,13 +516,13 @@ def main():
                     random_board = make_random_board()
                     
                     for i in range(MAX_MAP_GENERATION_ATTEMPTS):
-                        path = generate_valid_path(random_board, enemy_spawn, home_base, num_waypoints=4)
+                        path = generate_valid_path(random_board, enemy_spawn, home_base, num_waypoints=4, waypoint_offset_strength=4, waypoint_generation_mode=0)
                         if path is None:
                             print("Unable to generate map, regenerating map weights")
                             random_board = make_random_board()
                         else:
                             break
-                        
+                    print(len(path))
                     board = make_board()
                     for coords in path:
                         board[coords[1]][coords[0]] = 0
@@ -435,6 +535,34 @@ def main():
                     random_board = make_random_board()
                     home_base, enemy_spawn = choose_random_start_end()
                     home_base_coords, enemy_spawn_coords = get_base_enemy_coords(home_base, enemy_spawn)
+                elif event.key == pygame.K_x:
+                    # Generate path
+                    for attempt in range(MAX_MAP_GENERATION_ATTEMPTS):
+                        params = generate_parameters(DIFFICULTY)
+                        random_board = make_random_board()
+                        home_base, enemy_spawn = choose_random_start_end()
+                        #print(abs(enemy_spawn[0] - home_base[0]) + abs(enemy_spawn[1] - home_base[1]))
+                        while not validate_source_target(enemy_spawn, home_base, params["min_start_end_dist"], params["max_start_end_dist"]):
+                            home_base, enemy_spawn = choose_random_start_end()
+                            
+                        path = generate_valid_path(random_board, enemy_spawn, home_base, params["waypoint_count"], params["waypoint_offset"], params["use_global"])
+                        if SEED != 0:
+                            random.seed(SEED + attempt)
+                        if path is None:
+                            continue
+                        elif not validate_path(enemy_spawn, home_base, path):
+                            print("Invalid path")
+                            continue
+                        elif not (params["min_path_length"] <= len(path) <= params["max_path_length"]):
+                            print("Wrong length")
+                            continue
+                        else:
+                            break
+                    
+                    home_base_coords, enemy_spawn_coords = get_base_enemy_coords(home_base, enemy_spawn)
+                    board = make_board()
+                    for coords in path:
+                        board[coords[1]][coords[0]] = 0
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 click_pos = list(pygame.mouse.get_pos())
                 # Left-mouse button
