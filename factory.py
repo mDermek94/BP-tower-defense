@@ -1,6 +1,5 @@
 
 import pygame
-from enemy import Enemy
 from typing import List
 from math import *
 
@@ -12,6 +11,7 @@ class Factory:
 
         self.x = x
         self.y = y
+        self.max_health = health
         self.health = health
         self.production = 1
         self.last_production_time_ms = 0.0
@@ -51,3 +51,18 @@ class Factory:
             # Draw a rectangle if sprite failed to load
             pygame.draw.rect(surface, (100, 100, 100), 
                            (int(self.x - 15), int(self.y - 15), 30, 30))
+        
+        # Draw a healthbar
+        offset_x = -4
+        offset_y = 18
+        healthbar_width = 30
+        healthbar_height = 5
+        health_ratio = self.health / self.max_health
+        
+        # Background rect - doesn't change width, represents missing health
+        bg_rect = pygame.Rect(int(self.x - healthbar_width / 2 + offset_x), int(self.y + offset_y), healthbar_width, healthbar_height)
+        pygame.draw.rect(surface, (255, 0, 0), bg_rect)
+        
+        # Foreground rect - scales width with remaining health
+        fg_rect = pygame.Rect(int(self.x - healthbar_width / 2 + offset_x), int(self.y + offset_y), int(healthbar_width * health_ratio), healthbar_height)
+        pygame.draw.rect(surface, (0, 255, 0), fg_rect)

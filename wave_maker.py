@@ -10,6 +10,16 @@ class EnemyType:
     unlock_wave: int
     base_weight: float
 
+
+MAX_WAVES = 20
+
+DIFFICULTY = 20
+
+SEED = 10
+
+if SEED != 0:
+    random.seed(SEED)
+
 ENEMIES = [
     EnemyType(type=0, cost=1.0, unlock_wave=1, base_weight=1.0),
     EnemyType(type=1, cost=3.0, unlock_wave=4, base_weight=0.8),
@@ -27,16 +37,18 @@ WAVE_ARCHETYPES = [
 
 ARCHETYPES_MIN_WAVE = 6
 
-MAX_WAVES = 20
-
 BASE_WAVE_BUDGET = 3
 WAVE_BUDGET_GROWTH = 1.5
 WAVE_BUDGET_SCALING_FACTOR = 1.1
 
-def get_wave_budget(wave: int):
-    # Return a difficulty budget for a wave based on wave number
-    
-    return BASE_WAVE_BUDGET + (wave ** WAVE_BUDGET_SCALING_FACTOR) * WAVE_BUDGET_GROWTH
+
+def difficulty_multiplier(difficulty):
+    return 1 + (difficulty ** 0.7) * 0.2
+
+def get_wave_budget(wave, difficulty):
+    # Return a difficulty budget for a wave based on wave number and difficulty setting
+    base = BASE_WAVE_BUDGET + (wave ** WAVE_BUDGET_SCALING_FACTOR) * WAVE_BUDGET_GROWTH
+    return base * difficulty_multiplier(difficulty)
 
 def pick_archetype(wave: int):
     # Returns a random archetype
@@ -100,7 +112,7 @@ def weighted_enemy_choice(weights: dict):
             return key
 
 def generate_wave(wave: int):
-    budget = get_wave_budget(wave)
+    budget = get_wave_budget(wave, DIFFICULTY)
     
     available_enemies = [e for e in ENEMIES if e.unlock_wave <= wave]
     

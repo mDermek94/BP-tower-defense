@@ -1,9 +1,13 @@
 
 import pygame
 import math
+from typing import List
+from factory import Factory
+from bullet import Bullet
+
 
 class Enemy:
-    def __init__(self, x: float, y: float, type: int = 0):
+    def __init__(self, x: float, y: float, type: int = 0, shot_cooldown: int = 3000):
 
         self.x = x
         self.y = y
@@ -13,6 +17,9 @@ class Enemy:
         self.color = (255, 100, 100)
         self.health = 100
         self.type = type
+        self.last_shot_time = 0
+        self.shot_cooldown = shot_cooldown
+        self.bullet_speed = 3
             
         if self.type == 1:
             self.health = 100
@@ -97,6 +104,40 @@ class Enemy:
         else:
             return (1.0, 0.0)
     
+    def get_target(self, factories: List[Factory]):
+        
+        min_dist = 100000000
+        
+        best_factory = None # Shoot at closest
+        
+        for f in factories:
+            dx = f.x - self.x
+            dy = f.y - self.y
+            dist = dx*dx + dy*dy
+            if dist < min_dist:
+                min_dist = dist
+                best_factory = f
+                
+        return best_factory
+            
+    
+    def shoot(self, current_time: int, factories: List[Factory], bullets: List[Bullet]):
+        
+        if current_time - self.last_shot_time < self.shot_cooldown:
+            return
+        
+        target = self.get_target(factories)
+        
+        if target is None:
+            return
+        
+        bullet = Bullet(self.x, self.y, velocity=self.bullet_speed, type=self.type, is_enemy_bullet=True)
+        
+        bullet.get_target_factory(target)
+        
+        bullets.append(bullet)
+        self.last_shot_time = current_time
+    
     def draw(self, surface: pygame.Surface, size: int = 8):
 
         self.size = size
@@ -106,3 +147,8 @@ class Enemy:
         end_x = int(self.x + self.facing[0] * self.size * 1.5)
         end_y = int(self.y + self.facing[1] * self.size * 1.5)
         pygame.draw.line(surface, (255, 255, 255), (int(self.x), int(self.y)), (end_x, end_y), 2)
+        
+    def update(self, current_time: int, factories, bullets: List[Bullet], surface: pygame.Surface, size: int = 8):
+        if self.type == 2:
+            self.shoot(current_time, factories, bullets)
+        self.draw(surface, size)

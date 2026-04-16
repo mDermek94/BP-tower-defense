@@ -20,12 +20,13 @@ MIN_SOURCE_TARGET_DISTANCE = 2
 
 MAP_DIFFICULTY_CUTOFF = 20
 
+
+DIFFICULTY = 20
+
 SEED = 0
 
 if SEED != 0:
     random.seed(SEED)
-
-DIFFICULTY = 20
 
 BOARD_MAX_RANDOM = 10000 # Maximum of random value range
 WEIGHT_TUNING = 20       # Weight penalty for tiles closer to the edge
@@ -338,7 +339,7 @@ def generate_waypoints_path(source, target, num_waypoints, offset_strength = 2):
         perp_x /= length
         perp_y /= length
         
-        # Random offset
+        # Random offset - offsets the point from the line 
         offset = random.uniform(-offset_strength, offset_strength)
         
         x += perp_x * offset
@@ -370,13 +371,12 @@ def generate_waypoints_global(source, target, num_waypoints = 0):
     dx = ex - sx
     dy = ey - sy
     
+    # Sort result based on source and target position so that the chance of the path overlapping itself or being otherwise invalid is lower
     result = sorted(
         waypoints,
         key=lambda wp: (wp[0] - sx) * dx + (wp[1] - sy) * dy
     )
-    
-    print(result)
-    
+        
     return result
 
 def generate_waypoints(source, target, num_waypoints = 0, offset_strength = 2, mode = 0):
@@ -429,12 +429,11 @@ def validate_source_target(source, target, min_dist, max_dist):
         return abs(source[0] - target[0]) + abs(source[1] - target[1]) >= 2
 
 def generate_valid_path(board, source, target, num_waypoints = 0, waypoint_offset_strength = 2, waypoint_generation_mode = 0):
-    for i in range(MAX_MAP_GENERATION_ATTEMPTS):
-        path = path_with_waypoints(board, source, target, generate_waypoints(source, target, num_waypoints, waypoint_offset_strength, waypoint_generation_mode))
-        
-        if validate_path(source, target, path):
-            print(path)
-            return path
+    path = path_with_waypoints(board, source, target, generate_waypoints(source, target, num_waypoints, waypoint_offset_strength, waypoint_generation_mode))
+    
+    if validate_path(source, target, path):
+        print(path)
+        return path
         
     return None
 
@@ -456,7 +455,7 @@ def generate_parameters(difficulty):
     
     use_global = bool(t < 0.5)
         
-    min_len = int(25 - t * 22)
+    min_len = int(20 - t * 18)
     max_len = int(35 - t * 15)
         
     num_waypoints = int(5 - t * 5)

@@ -46,8 +46,10 @@ path_tile_color = (227, 189, 0)     # Path tile
 CURRENT_BOARD_FILE = "board_test_random.txt"
 CURRENT_WAVE_FILE = "wave_test_random.txt"
 
-KILL_REWARD = 1.0
-HEALTH_PENALTY = 1.0
+KILL_REWARD = 1.0           # Money for defeating an enemy
+HEALTH_PENALTY = 1.0        # Health lost per enemy reaching the home base
+
+ENEMY_SPAWN_INTERVAL = 0.5  # Time interval between enemy spawns
 
 # Tower costs
 TOWER0_COST_MONEY = 5
@@ -65,13 +67,12 @@ FACTORY0_COST_MONEY = 5
 FACTORY1_COST_MONEY = 10
 FACTORY1_COST_RESOURCE_1 = 10
 
+# Starting resources
 STARTING_HEALTH = 100
 
 STARTING_MONEY = 100
 STARTING_RESOURCE_1 = 100
 STARTING_RESOURCE_2 = 100
-
-ENEMY_SPAWN_INTERVAL = 0.5
 
 DEBUG_WAYPOINTS = False
 
@@ -663,8 +664,7 @@ def main():
         # Perform tower actions
         current_time_ms = pygame.time.get_ticks()
         for tower in towers:
-            tower.update(current_time_ms, enemies, bullets)
-            tower.draw(screen)
+            tower.update(current_time_ms, enemies, bullets, screen) # Draw + shoot
         
         # Draw all factories
         # Perform factory actions
@@ -673,7 +673,15 @@ def main():
                 resource_1 += factory.produce(current_time_ms, not can_place_towers)
             elif factory.type == 1:
                 resource_2 += factory.produce(current_time_ms, not can_place_towers)
-            factory.draw(screen)
+            if factory.health <= 0:
+                # Remove destroyed factories
+                factories.remove(factory)
+                # Make board tile available again
+                map_x = int((factory.x - board_x) // tile_size)
+                map_y = int((factory.y - board_y) // tile_size)
+                board[map_y][map_x] = 1
+            else:
+                factory.draw(screen)
         
         # Update and draw bullets
         delta_time = clock.get_time() / 16.67  # Normalize to ~60fps
@@ -684,23 +692,38 @@ def main():
             bullet_size = 4
             bullet_rect = pygame.Rect(int(bullet.x - bullet_size / 2), int(bullet.y - bullet_size / 2), bullet_size, bullet_size)
 
-            # Check enemy hit
-            hit_enemy = None
-            for enemy in enemies:
-                # Enemy bounding box
-                enemy_radius = getattr(enemy, 'size', 10)
-                enemy_rect = pygame.Rect(int(enemy.x - enemy_radius), int(enemy.y - enemy_radius), enemy_radius * 2, enemy_radius * 2)
-                if bullet_rect.colliderect(enemy_rect):
-                    hit_enemy = enemy
-                    break
+            if not bullet.is_enemy_bullet:
+                # Check enemy hit
+                hit_enemy = None
+                for enemy in enemies:
+                    # Enemy bounding box
+                    enemy_radius = getattr(enemy, 'size', 10)
+                    enemy_rect = pygame.Rect(int(enemy.x - enemy_radius), int(enemy.y - enemy_radius), enemy_radius * 2, enemy_radius * 2)
+                    if bullet_rect.colliderect(enemy_rect):
+                        hit_enemy = enemy
+                        break
 
-            # Remove bullet and hit enemy and add resource
-            if hit_enemy:
-                if hit_enemy.type <= bullet.type:
-                    money += getattr(hit_enemy, 'reward', 1)
-                    enemies.remove(hit_enemy)
-                bullets.remove(bullet)
-                continue
+                # Remove bullet and hit enemy and add resource
+                if hit_enemy:
+                    if hit_enemy.type <= bullet.type:
+                        money += getattr(hit_enemy, 'reward', 1)
+                        enemies.remove(hit_enemy)
+                    bullets.remove(bullet)
+                    continue
+                
+            else:
+                # Check factory hit
+                hit_factory = None
+                for factory in factories:
+                    factory_rect = pygame.Rect(int(factory.x - 20), int(factory.y - 20), 40, 40)
+                    if bullet_rect.colliderect(factory_rect):
+                        hit_factory = factory
+                        break
+                        
+                if hit_factory:
+                    factory.health -= bullet.factory_damage
+                    bullets.remove(bullet)
+                    continue
 
             # Remove bullets that leave the screen
             if (bullet.x < 0 or bullet.x > screen_width or bullet.y < 0 or bullet.y > screen_height) or can_place_towers:
@@ -711,7 +734,7 @@ def main():
 
         # Draw enemies
         for enemy in enemies:
-            enemy.draw(screen, size=10)
+            enemy.update(current_time_ms, factories, bullets, screen, size=10)
 
         # Draw tower following mouse
         if (dragging_tower or dragging_factory) and drag_sprite is not None:
