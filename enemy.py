@@ -14,24 +14,26 @@ class Enemy:
         self.size = 8
         self.facing = (1.0, 0.0)
         self.velocity = 2.5
-        self.color = (255, 100, 100)
+        self.color = (98, 96, 255)
         self.health = 100
         self.type = type
         self.last_shot_time = 0
         self.shot_cooldown = shot_cooldown
         self.bullet_speed = 3
+        self.damage = 2
             
         if self.type == 1:
             self.health = 100
             self.velocity = 3.0
-            self.color = (100, 255, 100)
+            self.color = (255, 96, 96)
+            self.damage = 5
         elif self.type == 2:
             self.health = 100
             self.velocity = 3.5
-            self.color = (100, 100, 255)
+            self.color = (172, 104, 199)
+            self.damage = 10
         
         self.reward = 1 + 1 * self.type
-        self.damage = 10
         
         self.path = []
         self.current_waypoint_index = 0

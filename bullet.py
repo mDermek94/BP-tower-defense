@@ -83,7 +83,7 @@ class Bullet:
         elif self.type == 1:
             color = (255, 96, 96)
         elif self.type == 2 and not self.is_enemy_bullet:
-            color = (255, 253, 123)
+            color = (172, 104, 199)
         elif self.type == 2 and self.is_enemy_bullet:
             color = (80, 80, 120)
         pygame.draw.circle(surface, color, (int(self.x), int(self.y)), size)
