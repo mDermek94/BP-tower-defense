@@ -361,7 +361,6 @@ def update_game_state(
     reward = 0
     
     # Spawn enemies at time-based intervals
-    time = pygame.time.get_ticks()
     if spawn_started and enemies_spawned < enemies_to_spawn:
         if time - last_spawn_time >= spawn_interval:
             new_enemy = Enemy(x=0, y=0, type=enemy_waves[current_wave - 1][enemies_spawned])
@@ -374,15 +373,16 @@ def update_game_state(
                 spawn_started = False
 
     # Lock play until wave ends
-    if not spawn_started and enemies_spawned == enemies_to_spawn and len(enemies) == 0:
+    if not spawn_started and enemies_spawned == enemies_to_spawn and len(enemies) == 0 and not can_place_towers:
         enemies_spawned = 0
         can_place_towers = True
         if current_wave + 1 <= MAX_WAVES:
             current_wave += 1
 
+    delta_time = 1
     # Update all enemies and remove those that reached the end
     for enemy in enemies[:]:
-        enemy.follow_path()
+        enemy.follow_path(delta_time)
         if enemy.reached_end:
             health -= enemy.damage
             reward -= enemy.damage # Penalize losing health
@@ -393,7 +393,7 @@ def update_game_state(
     for tower in towers:
         tower.shoot(time, enemies, bullets)
 
-    for factory in factories:
+    for factory in factories[:]:
         production = factory.produce(time, not can_place_towers)
         if factory.type == 0:
             resource_1 += production
@@ -410,7 +410,6 @@ def update_game_state(
             map_y = int((factory.y - board_y) // tile_size)
             board[map_y][map_x] = 1
 
-    delta_time = 1
     for bullet in bullets[:]:
         bullet.move(delta_time)
 
@@ -474,7 +473,7 @@ def perform_action(action_type, action_subtype, tile_x, tile_y,
                   tower2_cost_money, tower2_cost_resource_1, tower2_cost_resource_2,
                   factory0_cost_money,
                   factory1_cost_money, factory1_cost_resource_1,
-                  tile_size, board_x, board_y):
+                  tile_size, board_x, board_y, time):
     
     # Action types:
     #   1: Place tower
@@ -547,7 +546,7 @@ def perform_action(action_type, action_subtype, tile_x, tile_y,
         if can_place_towers:
             spawn_started = True
             enemies_to_spawn = len(enemy_waves[current_wave - 1])
-            last_spawn_time = pygame.time.get_ticks()
+            last_spawn_time = time
             can_place_towers = False
         
         return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board

@@ -56,7 +56,7 @@ TOWER1_COST_MONEY = 5
 TOWER1_COST_RESOURCE_1 = 5
 
 TOWER2_COST_MONEY = 10
-TOWER2_COST_RESOURCE_1 = 0
+TOWER2_COST_RESOURCE_1 = 10
 TOWER2_COST_RESOURCE_2 = 10
 
 # Factory costs
@@ -79,6 +79,8 @@ DEBUG_WAYPOINTS = False
 
 
 def main():
+    global use_agent
+    
     pygame.init()
     
     board_file = open(CURRENT_BOARD_FILE, "r")
@@ -381,9 +383,21 @@ def main():
             board_x, board_y, tile_size, screen_width, screen_height, pygame.time.get_ticks())
             
         if use_agent and not done:
-            pygame.time.delay(200)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT: # Window close
+                    running = False
+                elif event.type == pygame.KEYDOWN: # On key press
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
+                    else:
+                        print(pygame.key.name(event.key))
+            mouse_pos = (-110, -100)
+            pygame.time.delay(16)
             
-            action = env.action_space.sample()
+            if env.can_place_towers:
+                action = env.action_space.sample()
+            else:
+                action = [0, 0, 0, 0]
             
             obs, reward, done, truncated, info = env.step(
                 action,
@@ -406,8 +420,11 @@ def main():
             current_wave = env.current_wave
             towers = env.towers
             factories = env.factories
+            enemies = env.enemies
+            bullets = env.bullets
             
-            print(reward)
+            if done:
+                use_agent = False
             
         
         render(board, home_base_coords, enemy_spawn_coords, mouse_pos,

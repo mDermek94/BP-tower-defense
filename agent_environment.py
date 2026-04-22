@@ -62,61 +62,88 @@ class TowerDefenseEnv(gym.Env):
         
         action_type, action_subtype, x, y = action
         
-        reward = 0
+        total_reward = 0
         done = False
         
-        self.money, self.resource_1, self.resource_2, \
-        self.spawn_started, self.enemies_to_spawn, self.last_spawn_time, self.board = perform_action(
-            action_type, action_subtype, x, y,
-            self.board, self.towers, self.factories,
-            self.money, self.resource_1, self.resource_2,
-            self.can_place_towers, self.enemy_waves, self.current_wave,
-            False, 0, 0,
-            tower0_cost_money,
-            tower1_cost_money, tower1_cost_resource_1,
-            tower2_cost_money, tower2_cost_resource_1, tower2_cost_resource_2,
-            factory0_cost_money,
-            factory1_cost_money, factory1_cost_resource_1,
-            tile_size, board_x, board_y
-        )
-        
-        self.time += 1
-        
-        if action_type == 3:
-            self.spawn_started = True
-            self.enemies_to_spawn = len(self.enemy_waves[self.current_wave - 1])
-            self.last_spawn_time = self.time
-            self.can_place_towers = False
+        if self.can_place_towers:
+            self.money, self.resource_1, self.resource_2, \
+            self.spawn_started, self.enemies_to_spawn, self.last_spawn_time, self.board = perform_action(
+                action_type, action_subtype, x, y,
+                self.board, self.towers, self.factories,
+                self.money, self.resource_1, self.resource_2,
+                self.can_place_towers, self.enemy_waves, self.current_wave,
+                False, 0, 0,
+                tower0_cost_money,
+                tower1_cost_money, tower1_cost_resource_1,
+                tower2_cost_money, tower2_cost_resource_1, tower2_cost_resource_2,
+                factory0_cost_money,
+                factory1_cost_money, factory1_cost_resource_1,
+                tile_size, board_x, board_y, self.time
+            )
             
-        
-        (self.enemies,
-            self.enemies_spawned,
-            self.spawn_started,
-            self.last_spawn_time,
-            self.health,
-            self.money,
-            self.resource_1,
-            self.resource_2,
-            self.current_wave,
-            self.can_place_towers,
-            reward
-        ) = update_game_state(
-            self.enemies, self.enemies_spawned, self.enemies_to_spawn,
-            self.spawn_started, self.last_spawn_time, self.spawn_interval,
-            self.enemy_waves, self.current_wave, self.max_waves,
-            enemy_path, self.health,
-            self.towers, self.factories, self.bullets, self.board,
-            self.money, self.resource_1, self.resource_2, self.can_place_towers,
-            factory_death_penalty, board_x, board_y, tile_size, screen_width, screen_height, self.time)
+            if action_type == 3:
+                self.spawn_started = True
+                self.enemies_to_spawn = len(self.enemy_waves[self.current_wave - 1])
+                self.last_spawn_time = self.time
+                self.can_place_towers = False
                 
+                return self.get_obs(), total_reward, done, False, {}
             
+            (self.enemies,
+                self.enemies_spawned,
+                self.spawn_started,
+                self.last_spawn_time,
+                self.health,
+                self.money,
+                self.resource_1,
+                self.resource_2,
+                self.current_wave,
+                self.can_place_towers,
+                reward
+            ) = update_game_state(
+                self.enemies, self.enemies_spawned, self.enemies_to_spawn,
+                self.spawn_started, self.last_spawn_time, self.spawn_interval,
+                self.enemy_waves, self.current_wave, self.max_waves,
+                enemy_path, self.health,
+                self.towers, self.factories, self.bullets, self.board,
+                self.money, self.resource_1, self.resource_2, self.can_place_towers,
+                factory_death_penalty, board_x, board_y, tile_size, screen_width, screen_height, self.time)
+            
+            self.time += 16
+            total_reward += reward      
+        
+        if not self.can_place_towers:
+            #while not self.can_place_towers:
+            (self.enemies,
+                self.enemies_spawned,
+                self.spawn_started,
+                self.last_spawn_time,
+                self.health,
+                self.money,
+                self.resource_1,
+                self.resource_2,
+                self.current_wave,
+                self.can_place_towers,
+                reward
+            ) = update_game_state(
+                self.enemies, self.enemies_spawned, self.enemies_to_spawn,
+                self.spawn_started, self.last_spawn_time, self.spawn_interval,
+                self.enemy_waves, self.current_wave, self.max_waves,
+                enemy_path, self.health,
+                self.towers, self.factories, self.bullets, self.board,
+                self.money, self.resource_1, self.resource_2, self.can_place_towers,
+                factory_death_penalty, board_x, board_y, tile_size, screen_width, screen_height, self.time)
+            
+            self.time += 16
+            total_reward += reward
+        
         if self.health <= 0:
             done = True
         
-        if self.current_wave > self.max_waves:
+        if self.current_wave - 1 >= self.max_waves:
             done = True
             
-        return self.get_obs(), reward, done, False, {}
+        return self.get_obs(), total_reward, done, False, {}
     
     def get_obs(self):
         next_wave = self.enemy_waves[self.current_wave - 1]

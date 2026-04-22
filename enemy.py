@@ -50,7 +50,7 @@ class Enemy:
             if self.path[0]["dir"] is not None:
                 self.facing = self._dir_to_vector(self.path[0]["dir"])
         
-    def follow_path(self, delta_time: float = 1.0):
+    def follow_path(self, delta_time):
         if self.reached_end or not self.path:
             return
         
