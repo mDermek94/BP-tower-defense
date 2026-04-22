@@ -30,7 +30,7 @@ class Tower:
         if self.sprite is None:
             try:
                 original = pygame.image.load(f"Sprites/Towers/Tower-#{self.type + 1}.png")
-                print(f"Used Tower Sprite {self.type + 1}")
+                
                 # Scale to fit tile size
                 scale_factor = max(1, tile_size // original.get_width())
                 new_size = original.get_width() * scale_factor

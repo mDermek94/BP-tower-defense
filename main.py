@@ -4,8 +4,12 @@ from tower import Tower
 from factory import Factory
 from game_logic import *
 from agent_environment import TowerDefenseEnv
+import random
 
 use_agent = True
+AGENT_SEED = 0
+if AGENT_SEED == 0:
+    AGENT_SEED = random.randint(0, 9999999)
 
 # Window size
 screen_width = 1000
@@ -210,6 +214,7 @@ def main():
     
     if use_agent:
         env = TowerDefenseEnv()
+        env.action_space.seed(AGENT_SEED)
 
         obs, _ = env.reset(options={
             "board_file": CURRENT_BOARD_FILE,
@@ -394,10 +399,8 @@ def main():
             mouse_pos = (-110, -100)
             pygame.time.delay(16)
             
-            if env.can_place_towers:
-                action = env.action_space.sample()
-            else:
-                action = [0, 0, 0, 0]
+            # Choose a random action from the action space
+            action = env.action_space.sample()
             
             obs, reward, done, truncated, info = env.step(
                 action,
@@ -422,6 +425,8 @@ def main():
             factories = env.factories
             enemies = env.enemies
             bullets = env.bullets
+            
+            env.action_space.seed(AGENT_SEED + env.time)
             
             if done:
                 use_agent = False
