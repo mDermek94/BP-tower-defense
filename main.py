@@ -5,11 +5,8 @@ from factory import Factory
 from game_logic import *
 from agent_environment import TowerDefenseEnv
 import random
+import argparse
 
-use_agent = False
-AGENT_SEED = 0
-if AGENT_SEED == 0:
-    AGENT_SEED = random.randint(0, 9999999)
 
 # Window size
 screen_width = 1000
@@ -46,7 +43,7 @@ tower_tile_color_b = (42, 115, 33)  # Tower tile 2
 path_tile_color = (227, 189, 0)     # Path tile
 
 CURRENT_BOARD_FILE = "board_test_random.txt"
-CURRENT_WAVE_FILE = "wave_test_1.txt"
+CURRENT_WAVE_FILE = "wave_test_random.txt"
 
 KILL_REWARD = 1.0           # Money for defeating an enemy
 HEALTH_PENALTY = 1.0        # Health lost per enemy reaching the home base
@@ -70,7 +67,7 @@ FACTORY1_COST_MONEY = 10
 FACTORY1_COST_RESOURCE_1 = 10
 
 # Starting resources
-STARTING_HEALTH = 1
+STARTING_HEALTH = 100
 
 STARTING_MONEY = 100
 STARTING_RESOURCE_1 = 100
@@ -81,9 +78,27 @@ FACTORY_DEATH_PENALTY = 10
 
 DEBUG_WAYPOINTS = False
 
+def validate_seed(seed):
+    if seed is None:
+        seed = random.randint(0, 9999999)
+        return seed
+    if not (0 <= seed <= 9999999):
+        raise ValueError("Seed must be between 0 and 9999999")
+    
+    return seed
 
 def main():
-    global use_agent, AGENT_SEED
+    parser = argparse.ArgumentParser(prog="tower-defense")
+    parser.add_argument("--gymnasium", action="store_true", help="Run using gymnasium environment")
+    parser.add_argument("--seed", type=int, help="Seed for randomness in the gymnasium environment")
+    
+    args = parser.parse_args()
+    
+    seed = validate_seed(args.seed)
+    
+    run_game(use_agent=args.gymnasium, agent_seed=seed)
+
+def run_game(use_agent=False, agent_seed=None):
     
     pygame.init()
     
@@ -100,8 +115,8 @@ def main():
     
     board = get_starting_board(board_file)
     
-    for i in range(len(board)):
-        print(board[i])
+    # for i in range(len(board)):
+    #     print(board[i])
     
     home_base = board_file.readline().strip().split(",")
     enemy_spawn = board_file.readline().strip().split(",")
@@ -216,7 +231,7 @@ def main():
     
     if use_agent:
         env = TowerDefenseEnv()
-        env.action_space.seed(AGENT_SEED)
+        env.action_space.seed(agent_seed)
 
         obs, _ = env.reset(options={
             "board_file": CURRENT_BOARD_FILE,
@@ -435,7 +450,7 @@ def main():
             enemies = env.enemies
             bullets = env.bullets
             
-            env.action_space.seed(AGENT_SEED + env.time)
+            env.action_space.seed(agent_seed + env.time)
             
             if done:
                 use_agent = False
@@ -444,12 +459,9 @@ def main():
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
-                        use_agent = False
-                        return main()
+                        return run_game(use_agent=False, seed=None)
                     elif event.key == pygame.K_t:
-                        use_agent = True
-                        AGENT_SEED += 1
-                        return main()
+                        return run_game(use_agent=True, seed=agent_seed + 1)
                     elif event.key == pygame.K_ESCAPE:
                         running = False
         
@@ -479,4 +491,5 @@ def main():
 
     pygame.quit()
 
-main()
+if __name__ == "__main__":
+    main()

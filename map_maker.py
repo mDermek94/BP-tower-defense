@@ -2,6 +2,7 @@
 import pygame
 import random
 import heapq
+import argparse
 
 # Window size
 screen_width = 1000
@@ -17,16 +18,6 @@ INF = 10000000
 MAX_MAP_GENERATION_ATTEMPTS = 500
 
 MIN_SOURCE_TARGET_DISTANCE = 2
-
-MAP_DIFFICULTY_CUTOFF = 20
-
-
-DIFFICULTY = 20
-
-SEED = 0
-
-if SEED != 0:
-    random.seed(SEED)
 
 BOARD_MAX_RANDOM = 10000 # Maximum of random value range
 WEIGHT_TUNING = 20       # Weight penalty for tiles closer to the edge
@@ -102,7 +93,7 @@ def get_base_enemy_coords(home_base, enemy_spawn):
     home_base_coords = []
     enemy_spawn_coords = []
 
-    print(f"home base: {home_base}, enemy spawn: {enemy_spawn}")
+    #print(f"home base: {home_base}, enemy spawn: {enemy_spawn}")
 
     home_base_x = 0
     home_base_y = 0
@@ -284,7 +275,7 @@ def dijkstra(board, source, target): # Find the lowest weight path from source t
     # Reverse for correct use in the path_with_waypoints function, which expects points ordered [source -> waypoint -> ... -> waypoint -> target]
     path.reverse()
     return path
-        
+
 def path_with_waypoints(board, source, target, waypoints):
     # Reuse the dijkstra function for finding the shortest path between two points to add several waypoints the path is forced to pass through
     
@@ -432,7 +423,7 @@ def generate_valid_path(board, source, target, num_waypoints = 0, waypoint_offse
     path = path_with_waypoints(board, source, target, generate_waypoints(source, target, num_waypoints, waypoint_offset_strength, waypoint_generation_mode))
     
     if validate_path(source, target, path):
-        print(path)
+        #print(path)
         return path
         
     return None
@@ -450,8 +441,8 @@ def count_free_tiles(board):
 def generate_parameters(difficulty):
     # Generate map generation parameters based on difficulty level
     
-    map_D = min(difficulty, MAP_DIFFICULTY_CUTOFF)
-    t = map_D / MAP_DIFFICULTY_CUTOFF
+    map_D = min(difficulty, 20)
+    t = map_D / 20
     
     use_global = bool(t < 0.5)
         
@@ -479,8 +470,50 @@ def generate_parameters(difficulty):
         "min_start_end_dist": min_start_end_dist
     }
 
+def validate_seed(seed):
+    if seed is None:
+        return None
+    if not (0 <= seed <= 9999999):
+        raise ValueError("Seed must be between 0 and 9999999")
+    
+    return seed
 
 def main():
+    parser = argparse.ArgumentParser(prog="tower-defense-map-maker")
+    parser.add_argument("--seed", type=int, help="Seed for randomness")
+    parser.add_argument("--difficulty", type=int, required=True, help="Difficulty level <1, 20>")
+    
+    args = parser.parse_args()
+    
+    seed = validate_seed(args.seed)
+    difficulty = max(min(args.difficulty, 20), 1)
+    
+    if seed is not None:
+        random.seed(seed)
+        print(f"Starting map maker | difficulty={difficulty} | seed={seed}")
+    else:
+        print(f"Starting map maker | difficulty={difficulty}")
+    
+    hints = [
+        "Controls:", # Title
+        "Left-Click - toggle a tile between path and empty", # M1
+        "Right-Click - switch between selecting a start and end point (only works on edge tiles, clicking a start/end tile swaps them)", # M2
+        "T - generates new random start and end positions", # T
+        "G - generate a path from the current start to current end (disregards difficulty)", # G
+        "C - clear the board", # C
+        "X - generate a whole map based on seed and difficulty setting", # X
+        "S - save the map into map_test_random.txt", # S
+        "B - [DEBUG] show current board weights", # B
+        "ESC - close the window" # ESC
+    ]
+    
+    for i in range(10):
+        print(hints[i])
+    
+    run_map_maker(seed, difficulty)
+    
+
+def run_map_maker(seed, difficulty):
     pygame.init()
     
     board = []
@@ -517,11 +550,10 @@ def main():
                     for i in range(MAX_MAP_GENERATION_ATTEMPTS):
                         path = generate_valid_path(random_board, enemy_spawn, home_base, num_waypoints=4, waypoint_offset_strength=4, waypoint_generation_mode=0)
                         if path is None:
-                            print("Unable to generate map, regenerating map weights")
+                            #print("Unable to generate map, regenerating map weights")
                             random_board = make_random_board()
                         else:
                             break
-                    print(len(path))
                     board = make_board()
                     for coords in path:
                         board[coords[1]][coords[0]] = 0
@@ -533,11 +565,13 @@ def main():
                     board = make_board()
                     random_board = make_random_board()
                     home_base, enemy_spawn = choose_random_start_end()
+                    while not validate_source_target(home_base, enemy_spawn, 2, None):
+                        home_base, enemy_spawn = choose_random_start_end()
                     home_base_coords, enemy_spawn_coords = get_base_enemy_coords(home_base, enemy_spawn)
                 elif event.key == pygame.K_x:
                     # Generate path
                     for attempt in range(MAX_MAP_GENERATION_ATTEMPTS):
-                        params = generate_parameters(DIFFICULTY)
+                        params = generate_parameters(difficulty)
                         random_board = make_random_board()
                         home_base, enemy_spawn = choose_random_start_end()
                         #print(abs(enemy_spawn[0] - home_base[0]) + abs(enemy_spawn[1] - home_base[1]))
@@ -545,15 +579,17 @@ def main():
                             home_base, enemy_spawn = choose_random_start_end()
                             
                         path = generate_valid_path(random_board, enemy_spawn, home_base, params["waypoint_count"], params["waypoint_offset"], params["use_global"])
-                        if SEED != 0:
-                            random.seed(SEED + attempt)
+                        if seed is not None:
+                            random.seed(seed + attempt)
+                        else:
+                            random.seed()
                         if path is None:
                             continue
                         elif not validate_path(enemy_spawn, home_base, path):
-                            print("Invalid path")
+                            #print("Invalid path")
                             continue
                         elif not (params["min_path_length"] <= len(path) <= params["max_path_length"]):
-                            print("Wrong length")
+                            #print("Wrong length")
                             continue
                         else:
                             break
@@ -576,6 +612,7 @@ def main():
                             elif board[map_y][map_x] == 0:
                                 board[map_y][map_x] = 1
                                 random_board[map_y][map_x] = random.uniform(0, BOARD_MAX_RANDOM)
+                # Right-mouse button
                 elif (pygame.mouse.get_pressed(num_buttons=3) == (0, 0, 1)):
                     if (click_pos[0] >= board_x and click_pos[0] <= board_x + board_size) and (click_pos[1] >= board_y and click_pos[1] <= board_y + board_size):
                         map_x = (click_pos[0] - board_x) // tile_size
@@ -592,6 +629,12 @@ def main():
                                     else:
                                         enemy_spawn = (map_x, map_y)
                                     spawn_switcher = not spawn_switcher
+                                counter = 0
+                                while not validate_source_target(home_base, enemy_spawn, 2, None):
+                                    home_base, enemy_spawn = choose_random_start_end()
+                                    if counter == 0:
+                                        print("[WARNING] Start and end need to have at least one free tile between them")
+                                        counter += 1
                                 home_base_coords, enemy_spawn_coords = get_base_enemy_coords(home_base, enemy_spawn)
             elif event.type == pygame.MOUSEBUTTONUP:
                 # Board debug - print board x, y and tile type at mouse position
@@ -599,13 +642,13 @@ def main():
                     map_x = (click_pos[0] - board_x) // tile_size
                     map_y = (click_pos[1] - board_y) // tile_size
                     if map_x < len(board) - 1 and map_y < len(board) - 1:
-                        print(f"x: {map_x}, y: {map_y}, {random_board[map_y][map_x]}")
+                        #print(f"x: {map_x}, y: {map_y}, {random_board[map_y][map_x]}")
                         if board[map_y][map_x] == 1:
                             tile_type = "tower"
-                            print(tile_type)
+                            #print(tile_type)
                         elif board[map_y][map_x] == 0:
                             tile_type = "path"
-                            print(tile_type)
+                            #print(tile_type)
                             
         mouse_pos = list(pygame.mouse.get_pos())
             
@@ -632,9 +675,12 @@ def main():
             pygame.draw.rect(screen, (255, 255, 255), (enemy_spawn_coords[0], enemy_spawn_coords[1], tile_size / 2, tile_size / 2))
             pygame.draw.rect(screen, (255, 0, 255), (enemy_spawn_coords[0]+1, enemy_spawn_coords[1]+1, tile_size / 2 - 2, tile_size / 2 - 2))
         
+        font = pygame.font.SysFont(None, 24)
+        
         pygame.display.flip()
         clock.tick(60)
     
     pygame.quit()
     
-main()
+if __name__ == "__main__":
+    main()

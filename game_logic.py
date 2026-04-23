@@ -205,7 +205,7 @@ def get_base_enemy_coords(home_base, enemy_spawn, board_x, board_y, tile_size):
     enemy_spawn_coords.append(enemy_spawn_x)
     enemy_spawn_coords.append(enemy_spawn_y)
     
-    print(home_base_coords, enemy_spawn_coords)
+    #print(home_base_coords, enemy_spawn_coords)
     return home_base_coords, enemy_spawn_coords
 
 def render(board, home_base_coords, enemy_spawn_coords, mouse_pos,

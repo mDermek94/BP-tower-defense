@@ -1,6 +1,7 @@
 
 import random
 import math
+import argparse
 from dataclasses import dataclass
 
 @dataclass
@@ -10,15 +11,6 @@ class EnemyType:
     unlock_wave: int
     base_weight: float
 
-
-MAX_WAVES = 20
-
-DIFFICULTY = 20
-
-SEED = 10
-
-if SEED != 0:
-    random.seed(SEED)
 
 ENEMIES = [
     EnemyType(type=0, cost=1.0, unlock_wave=1, base_weight=1.0),
@@ -69,7 +61,7 @@ def pick_archetype(wave: int):
     
     return random.choices(choices, probabilities)[0]
 
-def get_enemy_weight(enemy: EnemyType, wave: int):
+def get_enemy_weight(enemy, wave):
     # Get the weight cost of the enemy type for the current wave
     
     # Check if the enmy type can spawn
@@ -81,7 +73,7 @@ def get_enemy_weight(enemy: EnemyType, wave: int):
     
     return enemy.base_weight * decay
     
-def apply_archetype_weights(weights: dict, archetype: str):
+def apply_archetype_weights(weights, archetype):
     # Apply the picked archetype weight modifiers to the enemy weights
     
     modified_weights = weights.copy()
@@ -98,7 +90,7 @@ def apply_archetype_weights(weights: dict, archetype: str):
     
     return modified_weights
 
-def weighted_enemy_choice(weights: dict):
+def weighted_enemy_choice(weights):
     total = sum(weights.values())
     if total == 0:
         return None
@@ -111,8 +103,8 @@ def weighted_enemy_choice(weights: dict):
         if r <= current_weight:
             return key
 
-def generate_wave(wave: int):
-    budget = get_wave_budget(wave, DIFFICULTY)
+def generate_wave(wave, difficulty):
+    budget = get_wave_budget(wave, difficulty)
     
     available_enemies = [e for e in ENEMIES if e.unlock_wave <= wave]
     
@@ -150,13 +142,13 @@ def generate_wave(wave: int):
         
     return wave_groups, archetype
 
-def generate_game():
+def generate_game(difficulty, num_waves):
     game_waves = []
     
-    for wave in range(1, MAX_WAVES + 1):
-        groups, archetype = generate_wave(wave)
+    for wave in range(1, num_waves + 1):
+        groups, archetype = generate_wave(wave, difficulty)
         while groups == []:
-            groups, archetype = generate_wave(wave)
+            groups, archetype = generate_wave(wave, difficulty)
         game_waves.append({
             "wave": wave,
             "archetype": archetype,
@@ -166,7 +158,7 @@ def generate_game():
     return game_waves
 
 
-def save_into_file(waves: list):
+def save_into_file(waves):
     file = open("wave_test_random.txt", "w")
     
     num_wave = 0
@@ -179,15 +171,42 @@ def save_into_file(waves: list):
         
     file.close()
 
+def validate_seed(seed):
+    if seed is None:
+        return None
+    if not (0 <= seed <= 9999999):
+        raise ValueError("Seed must be between 0 and 9999999")
+    
+    return seed
+
 def main():
-    game = generate_game()
+    parser = argparse.ArgumentParser(prog="tower-defense-wave-maker")
+    parser.add_argument("--seed", type=int, help="Seed for randomness")
+    parser.add_argument("--difficulty", type=int, required=True, help="Difficulty level")
+    parser.add_argument("--num-waves", type=int, required=True, help="Number of waves to generate")
+    
+    args = parser.parse_args()
+    
+    seed = validate_seed(args.seed)
+    difficulty = max(1, args.difficulty)
+    num_waves = max(1, args.num_waves)
+    
+    if seed is not None:
+        random.seed(seed)
+        print(f"Generating waves | difficulty={difficulty} | number of waves={num_waves} |seed={seed}")
+    else:
+        print(f"Generating waves | difficulty={difficulty} | number of waves={num_waves}")
+        
+    run_wave_maker(difficulty, num_waves)
+
+def run_wave_maker(difficulty, num_waves):
+    game = generate_game(difficulty, num_waves)
     
     for wave in game:
-        print(f"Wave {wave["wave"]} ({wave["archetype"]}): ", end="")
+        print(f"Wave {wave['wave']} ({wave['archetype']}): ", end="")
         print(", ".join(f"{n}x{t}" for n, t in wave["groups"]))
         
     save_into_file(game)
 
-
-
-main()
+if __name__ == "__main__":
+    main()
