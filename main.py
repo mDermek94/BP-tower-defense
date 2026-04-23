@@ -6,7 +6,7 @@ from game_logic import *
 from agent_environment import TowerDefenseEnv
 import random
 
-use_agent = True
+use_agent = False
 AGENT_SEED = 0
 if AGENT_SEED == 0:
     AGENT_SEED = random.randint(0, 9999999)
@@ -46,7 +46,7 @@ tower_tile_color_b = (42, 115, 33)  # Tower tile 2
 path_tile_color = (227, 189, 0)     # Path tile
 
 CURRENT_BOARD_FILE = "board_test_random.txt"
-CURRENT_WAVE_FILE = "wave_test_random.txt"
+CURRENT_WAVE_FILE = "wave_test_1.txt"
 
 KILL_REWARD = 1.0           # Money for defeating an enemy
 HEALTH_PENALTY = 1.0        # Health lost per enemy reaching the home base
@@ -70,7 +70,7 @@ FACTORY1_COST_MONEY = 10
 FACTORY1_COST_RESOURCE_1 = 10
 
 # Starting resources
-STARTING_HEALTH = 100
+STARTING_HEALTH = 1
 
 STARTING_MONEY = 100
 STARTING_RESOURCE_1 = 100
@@ -83,7 +83,7 @@ DEBUG_WAYPOINTS = False
 
 
 def main():
-    global use_agent
+    global use_agent, AGENT_SEED
     
     pygame.init()
     
@@ -212,6 +212,8 @@ def main():
     running = True
     tile_type = ""
     
+    game_state = "playing"
+    
     if use_agent:
         env = TowerDefenseEnv()
         env.action_space.seed(AGENT_SEED)
@@ -230,7 +232,7 @@ def main():
     
     while running:
         mouse_pos = list(pygame.mouse.get_pos())
-        if not use_agent:
+        if not use_agent and game_state == "playing":
             tower_inventory_areas = draw_tower_inventory(screen, tower_sprites, mouse_pos, board_x, board_y, board_size, screen_width, ui_panel_color, ui_box_color, ui_box_hover, ui_box_border, mode=1)
             factory_inventory_areas = draw_factory_inventory(screen, factory_sprites, mouse_pos, board_x, board_y, board_size, screen_width, ui_box_color, ui_box_hover, ui_box_border, mode=1)
             for event in pygame.event.get():
@@ -382,12 +384,15 @@ def main():
                                 tile_type = "path"
                                 print(tile_type)
                                 
-            enemies, enemies_spawned, spawn_started, last_spawn_time, health, money, resource_1, resource_2, current_wave, can_place_towers, reward = update_game_state(enemies, enemies_spawned, enemies_to_spawn, spawn_started, last_spawn_time, spawn_interval,
+            enemies, enemies_spawned, spawn_started, last_spawn_time, health, money, resource_1, resource_2, current_wave, can_place_towers, reward, game_state = update_game_state(enemies, enemies_spawned, enemies_to_spawn, spawn_started, last_spawn_time, spawn_interval,
             enemy_waves, current_wave, MAX_WAVES, enemy_path, health, towers, factories, bullets, board,
             money, resource_1, resource_2, can_place_towers, FACTORY_DEATH_PENALTY,
             board_x, board_y, tile_size, screen_width, screen_height, pygame.time.get_ticks())
             
-        if use_agent and not done:
+            if health <= 0:
+                game_state = "defeat"
+            
+        if use_agent and not done and game_state == "playing":
             for event in pygame.event.get():
                 if event.type == pygame.QUIT: # Window close
                     running = False
@@ -402,7 +407,11 @@ def main():
             # Choose a random action from the action space
             action = env.action_space.sample()
             
-            obs, reward, done, truncated, info = env.step(
+            # Change action to nothing if action is BUILD_FACTORY with a subtype of 2, since there is no factory with a subtype of 2
+            if action[0] == 2 and action[1] == 2:
+                action = [0, 0, 0, 0]
+            
+            obs, reward, done, game_state, truncated, info = env.step(
                 action,
                 TOWER0_COST_MONEY,
                 TOWER1_COST_MONEY, TOWER1_COST_RESOURCE_1,
@@ -430,19 +439,41 @@ def main():
             
             if done:
                 use_agent = False
-            
         
-        render(board, home_base_coords, enemy_spawn_coords, mouse_pos,
-                   spawn_started, can_place_towers, fonts,
-                   health, money, resource_1, resource_2,
-                   current_wave, MAX_WAVES, enemy_path,
-                   tower_sprites, factory_sprites,
-                   towers, factories, enemies, bullets,
-                   dragging_tower, dragging_factory, drag_sprite, DEBUG_WAYPOINTS,
-                   screen, bg_color, board_x, board_y, board_size, board_color,
-                   tile_count, tile_size, path_tile_color, tower_tile_color_a, tower_tile_color_b,
-                   line_color, play_button_x, screen_width,
-                   ui_panel_color, ui_box_color, ui_box_hover, ui_box_border)
+        if game_state in ["victory", "defeat"]:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_r:
+                        use_agent = False
+                        return main()
+                    elif event.key == pygame.K_t:
+                        use_agent = True
+                        AGENT_SEED += 1
+                        return main()
+                    elif event.key == pygame.K_ESCAPE:
+                        running = False
+        
+        if not running:
+            break
+        
+        if game_state == "victory":
+            draw_end_screen(screen, "VICTORY")
+        
+        elif game_state == "defeat":
+            draw_end_screen(screen, "DEFEAT")
+            
+        else:
+            render(board, home_base_coords, enemy_spawn_coords, mouse_pos,
+                spawn_started, can_place_towers, fonts,
+                health, money, resource_1, resource_2,
+                current_wave, MAX_WAVES, enemy_path,
+                tower_sprites, factory_sprites,
+                towers, factories, enemies, bullets,
+                dragging_tower, dragging_factory, drag_sprite, DEBUG_WAYPOINTS,
+                screen, bg_color, board_x, board_y, board_size, board_color,
+                tile_count, tile_size, path_tile_color, tower_tile_color_a, tower_tile_color_b,
+                line_color, play_button_x, screen_width,
+                ui_panel_color, ui_box_color, ui_box_hover, ui_box_border)
             
         clock.tick(60)
 

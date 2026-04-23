@@ -359,6 +359,7 @@ def update_game_state(
     board_x, board_y, tile_size, screen_width, screen_height, time
 ):
     reward = 0
+    game_state = "playing"
     
     # Spawn enemies at time-based intervals
     if spawn_started and enemies_spawned < enemies_to_spawn:
@@ -376,8 +377,10 @@ def update_game_state(
     if not spawn_started and enemies_spawned == enemies_to_spawn and len(enemies) == 0 and not can_place_towers:
         enemies_spawned = 0
         can_place_towers = True
-        if current_wave + 1 <= MAX_WAVES:
+        if current_wave < MAX_WAVES:
             current_wave += 1
+        else:
+            game_state = "victory"
 
     delta_time = 1
     # Update all enemies and remove those that reached the end
@@ -459,7 +462,7 @@ def update_game_state(
     if health <= 0:
         reward -= 500 # Heavy penalty for losing
     
-    return enemies, enemies_spawned, spawn_started, last_spawn_time, health, money, resource_1, resource_2, current_wave, can_place_towers, reward
+    return enemies, enemies_spawned, spawn_started, last_spawn_time, health, money, resource_1, resource_2, current_wave, can_place_towers, reward, game_state
 
 def perform_action(action_type, action_subtype, tile_x, tile_y,
                   board, towers, factories,
@@ -552,6 +555,34 @@ def perform_action(action_type, action_subtype, tile_x, tile_y,
         return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board
         
     return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board
+
+def draw_end_screen(screen, text):
+    overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+    overlay.fill((40, 40, 40, 255))
+    screen.blit(overlay, (0, 0))
+    
+    font = pygame.font.SysFont(None, 72)
+    small_font = pygame.font.SysFont(None, 36)
+    
+    if text == "VICTORY":
+        color = (0, 0, 255)
+    else:
+        color = (255, 0, 0)
+    
+    screen_x = 100
+    screen_y = 100
+    
+    title = font.render(text, True, color)
+    restart_player = small_font.render("Press R to restart in player mode", True, (255, 255, 255))
+    restart_agent = small_font.render("Press T to restart in agent mode", True, (255, 255, 255))
+    quit_text = small_font.render("Press ESC to quit", True, (255, 255, 255))
+    
+    screen.blit(title, (screen_x, screen_y))
+    screen.blit(restart_player, (screen_x, screen_y + 100))
+    screen.blit(restart_agent, (screen_x, screen_y + 200))
+    screen.blit(quit_text, (screen_x, screen_y + 300))
+    
+    pygame.display.flip()
 
 def get_starting_board(board_file):
     board = []
