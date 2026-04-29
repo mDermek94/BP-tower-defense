@@ -185,7 +185,7 @@ def run_game(use_agent=False, agent_seed=None):
     game_state = "playing"
     
     if use_agent:
-        env = TowerDefenseEnv(render_mode="rng_array")
+        env = TowerDefenseEnv(render_mode="human")
         env.action_space.seed(agent_seed)
 
         obs, info = env.reset()
