@@ -517,13 +517,17 @@ def perform_action(action_type, action_subtype, tile_x, tile_y,
     #   2: Place factory
     #   3: Start wave phase
     
+    reward = 0
+    
     # Can only perform actions during build phase
     if not can_place_towers:
         return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board
     
     # Check if chosen tile is an empty tower tile
     if board[tile_y][tile_x] != 1:
-        return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board
+        print("Cannot place building on an occupied tile")
+        reward -= 10 # Penalty for trying to build on an occupied tile
+        return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board, reward
     
     # Place a tower
     if action_type == 1:
@@ -550,7 +554,9 @@ def perform_action(action_type, action_subtype, tile_x, tile_y,
             resource_2 -= tower2_cost_resource_2
             
         else:
-            return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board
+            print("Not enough resources to build tower")
+            reward -= 10 # Penalty for trying to build without required resources
+            return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board, reward
         
         towers.append(new_tower)
         board[tile_y][tile_x] = 2 + new_tower.type
@@ -573,7 +579,9 @@ def perform_action(action_type, action_subtype, tile_x, tile_y,
             resource_1 -= factory1_cost_resource_1
             
         else:
-            return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board
+            print("Not enough resources to build factory")
+            reward -= 10 # Penalty for trying to build without required resources
+            return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board, reward
         
         factories.append(new_factory)
         board[tile_y][tile_x] = 5 + new_factory.type
@@ -586,9 +594,9 @@ def perform_action(action_type, action_subtype, tile_x, tile_y,
             last_spawn_time = time
             can_place_towers = False
         
-        return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board
+        return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board, reward
         
-    return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board
+    return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board, reward
 
 def draw_end_screen(screen, text):
     overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)

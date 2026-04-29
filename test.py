@@ -1,8 +1,12 @@
 
+"""
+This file shows how it is possible to run the environment by itself without the main game code.    
+"""
+
 import pygame
 from environment import TowerDefenseEnv
 
-env = TowerDefenseEnv(render_mode="rgb_array")
+env = TowerDefenseEnv(render_mode="human")
 
 obs, info = env.reset()
 

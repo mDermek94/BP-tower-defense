@@ -73,7 +73,7 @@ class TowerDefenseEnv(gym.Env):
         
         super().reset(seed=seed)
         
-        # Set all the important variables
+        # Set all the variables
         with open(CURRENT_BOARD_FILE, "r") as f:
             self.board = get_starting_board(f)
             
@@ -110,13 +110,12 @@ class TowerDefenseEnv(gym.Env):
         
         was_in_wave = not self.can_place_towers    # Phase transition detection
         
-        done = False    # Game over logic
-        game_state = "playing"
+        done = False    # Terminated
         
         if self.can_place_towers:
             # If in build phase, perform an action based on [action_type, action_subtype, x, y]
             self.money, self.resource_1, self.resource_2, \
-            self.spawn_started, self.enemies_to_spawn, self.last_spawn_time, self.board = perform_action(
+            self.spawn_started, self.enemies_to_spawn, self.last_spawn_time, self.board, reward = perform_action(
                 action_type, action_subtype, x, y,
                 self.board, self.towers, self.factories,
                 self.money, self.resource_1, self.resource_2,
@@ -132,18 +131,16 @@ class TowerDefenseEnv(gym.Env):
             
             # Print actions taken
             action_names = ["INVALID ACTION", "BUILD TOWER", "BUILD FACTORY", "START WAVE"]
-            if self.board[y][x] != 0 or action[0] in (0, 3):
+            if (self.board[y][x] != 0 or action[0] in (0, 3)) and action[0] != 0: # Print chosen action, except if invalid
                 print(f"Action: {action_names[action_type]} | subtype={action_subtype} | pos=({x}, {y})")
             
-            if action_type == 0:
-                self.wave_reward -= 10 # Penalty for performing an invalid action
+            self.wave_reward += reward
             
             if action_type == 3: # Action = swap to wave phase
                 self.spawn_started = True
                 self.enemies_to_spawn = len(self.enemy_waves[self.current_wave - 1])
                 self.last_spawn_time = self.time
                 self.can_place_towers = False
-                self.wave_reward = 0
                 # Just return current state, since the agent cannot perform any actions after starting a wave
                 return self._get_obs(), self.wave_reward, done, False, self._get_info()
             
@@ -200,13 +197,13 @@ class TowerDefenseEnv(gym.Env):
         # Print the reward for the last wave
         if was_in_wave and self.can_place_towers:
             print(f"Wave {self.current_wave - 1} finished. Total reward: {round(self.wave_reward, 2)}")
+            self.wave_reward = 0
         
         if self.health <= 0:
-            game_state = "defeat"
             done = True
             
-        if game_state == "victory":
-            done = True
+        # if game_state == "victory":
+        #     done = True
         
         if self.current_wave - 1 >= self.max_waves:
             done = True
