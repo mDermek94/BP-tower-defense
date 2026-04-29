@@ -17,9 +17,6 @@ from config import CURRENT_BOARD_FILE, CURRENT_WAVE_FILE, SCREEN_WIDTH, SCREEN_H
 screen_width = SCREEN_WIDTH
 screen_height = SCREEN_HEIGHT
 
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Tower Defense")
-
 clock = pygame.time.Clock()
 
 max_board_width = screen_width - 300
@@ -74,6 +71,10 @@ def main():
 def run_game(use_agent=False, agent_seed=None):
     
     pygame.init()
+    
+    if not use_agent:
+        screen = pygame.display.set_mode((screen_width, screen_height))
+        pygame.display.set_caption("Tower Defense")
     
     board_file = open(CURRENT_BOARD_FILE, "r")
     
@@ -184,7 +185,7 @@ def run_game(use_agent=False, agent_seed=None):
     game_state = "playing"
     
     if use_agent:
-        env = TowerDefenseEnv(render_mode="human")
+        env = TowerDefenseEnv(render_mode="rng_array")
         env.action_space.seed(agent_seed)
 
         obs, info = env.reset()
@@ -196,8 +197,12 @@ def run_game(use_agent=False, agent_seed=None):
         while running and not (terminated or truncated):
             action = env.action_space.sample()
             
-            obs, reward, terminated, truncated, info = env.step(action)
-            
+            obs, reward, terminated, truncated, info, game_state = env.step(action)
+        
+        print(f"Game ended by: {game_state}")
+        
+        print()
+        
         env.close()
         pygame.quit()
         return

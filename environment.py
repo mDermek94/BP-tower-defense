@@ -112,6 +112,8 @@ class TowerDefenseEnv(gym.Env):
         
         done = False    # Terminated
         
+        game_state = "playing"
+        
         if self.can_place_towers:
             # If in build phase, perform an action based on [action_type, action_subtype, x, y]
             self.money, self.resource_1, self.resource_2, \
@@ -142,7 +144,7 @@ class TowerDefenseEnv(gym.Env):
                 self.last_spawn_time = self.time
                 self.can_place_towers = False
                 # Just return current state, since the agent cannot perform any actions after starting a wave
-                return self._get_obs(), self.wave_reward, done, False, self._get_info()
+                return self._get_obs(), self.wave_reward, done, False, self._get_info(), game_state
             
             # Update the game state
             (self.enemies,
@@ -196,14 +198,12 @@ class TowerDefenseEnv(gym.Env):
         
         # Print the reward for the last wave
         if was_in_wave and self.can_place_towers:
-            print(f"Wave {self.current_wave - 1} finished. Total reward: {round(self.wave_reward, 2)}")
+            print(f"Wave {self.current_wave - 1} finished. Total reward: {round(self.wave_reward, 2)}.")
             self.wave_reward = 0
         
         if self.health <= 0:
+            game_state = "defeat"
             done = True
-            
-        # if game_state == "victory":
-        #     done = True
         
         if self.current_wave - 1 >= self.max_waves:
             done = True
@@ -220,7 +220,7 @@ class TowerDefenseEnv(gym.Env):
                         game_state = "quit"
                         done = True
         
-        return self._get_obs(), self.wave_reward, done, False, self._get_info()
+        return self._get_obs(), self.wave_reward, done, False, self._get_info(), game_state
     
     def _get_info(self):
         # Get the current observation space
