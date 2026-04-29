@@ -3,14 +3,19 @@ import pygame
 from tower import Tower
 from factory import Factory
 from game_logic import *
-from agent_environment import TowerDefenseEnv
+from environment import TowerDefenseEnv
 import random
 import argparse
-
+import os
+from config import CURRENT_BOARD_FILE, CURRENT_WAVE_FILE, SCREEN_WIDTH, SCREEN_HEIGHT,\
+    TOWER0_COST_MONEY, TOWER1_COST_MONEY, TOWER1_COST_RESOURCE_1, TOWER2_COST_MONEY, TOWER2_COST_RESOURCE_1, TOWER2_COST_RESOURCE_2,\
+    FACTORY0_COST_MONEY, FACTORY1_COST_MONEY, FACTORY1_COST_RESOURCE_1, FACTORY_DEATH_PENALTY,\
+    STARTING_HEALTH, STARTING_MONEY, STARTING_RESOURCE_1, STARTING_RESOURCE_2,\
+    BG_COLOR, BOARD_COLOR, UI_PANEL_COLOR, UI_BOX_COLOR, UI_BOX_HOVER, UI_BOX_BORDER, LINE_COLOR, TOWER_TILE_COLOR_A, TOWER_TILE_COLOR_B, PATH_TILE_COLOR
 
 # Window size
-screen_width = 1000
-screen_height = 800
+screen_width = SCREEN_WIDTH
+screen_height = SCREEN_HEIGHT
 
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Tower Defense")
@@ -30,51 +35,19 @@ board_y = (screen_height - board_size) // 2
 
 play_button_x = board_x - 135
 
-# Colors
-bg_color = (40, 40, 40)             # Window background
-board_color = (0, 0, 0)             # Board background
-ui_panel_color = (60, 60, 60)       # UI panel background
-ui_box_color = (80, 80, 80)         # Tower inventory box
-ui_box_hover = (100, 100, 100)      # Hover color
-ui_box_border = (200, 200, 200)     # Border color
-line_color = (0, 0, 0)              # Grid lines
-tower_tile_color_a = (72, 209, 56)  # Tower tile 1
-tower_tile_color_b = (42, 115, 33)  # Tower tile 2
-path_tile_color = (227, 189, 0)     # Path tile
-
-CURRENT_BOARD_FILE = "board_test_random.txt"
-CURRENT_WAVE_FILE = "wave_test_random.txt"
-
-KILL_REWARD = 1.0           # Money for defeating an enemy
-HEALTH_PENALTY = 1.0        # Health lost per enemy reaching the home base
+# Colors - suggested by AI - ChatGPT
+bg_color = BG_COLOR                         # Window background
+board_color = BOARD_COLOR                   # Board background
+ui_panel_color = UI_PANEL_COLOR             # UI panel background
+ui_box_color = UI_BOX_COLOR                 # Tower inventory box
+ui_box_hover = UI_BOX_HOVER                 # Hover color
+ui_box_border = UI_BOX_BORDER               # Border color
+line_color = LINE_COLOR                     # Grid lines
+tower_tile_color_a = TOWER_TILE_COLOR_A     # Tower tile 1
+tower_tile_color_b = TOWER_TILE_COLOR_B     # Tower tile 2
+path_tile_color = PATH_TILE_COLOR           # Path tile
 
 ENEMY_SPAWN_INTERVAL = 500  # Time interval between enemy spawns in ms
-
-# Tower costs
-TOWER0_COST_MONEY = 5
-
-TOWER1_COST_MONEY = 5
-TOWER1_COST_RESOURCE_1 = 5
-
-TOWER2_COST_MONEY = 10
-TOWER2_COST_RESOURCE_1 = 10
-TOWER2_COST_RESOURCE_2 = 10
-
-# Factory costs
-FACTORY0_COST_MONEY = 5
-
-FACTORY1_COST_MONEY = 10
-FACTORY1_COST_RESOURCE_1 = 10
-
-# Starting resources
-STARTING_HEALTH = 100
-
-STARTING_MONEY = 100
-STARTING_RESOURCE_1 = 100
-STARTING_RESOURCE_2 = 100
-
-# Agent reward values
-FACTORY_DEATH_PENALTY = 10
 
 DEBUG_WAYPOINTS = False
 
@@ -133,31 +106,6 @@ def run_game(use_agent=False, agent_seed=None):
     
     home_base_coords, enemy_spawn_coords = get_base_enemy_coords(home_base, enemy_spawn, board_x, board_y, tile_size)
 
-    # Adjust first and last waypoints of the path
-    if enemy_path:
-        # 0
-        enemy_spawn_x = enemy_spawn_coords[0] + tile_size / 4
-        enemy_spawn_y = enemy_spawn_coords[1] + tile_size / 4
-        if enemy_spawn[0] == 0: enemy_dir = 'right'
-        if enemy_spawn[0] == 9: enemy_dir = 'left'
-        if enemy_spawn[1] == 0: enemy_dir = 'down'
-        if enemy_spawn[1] == 9: enemy_dir = 'up'
-        
-        enemy_path.insert(0, {"x": enemy_spawn_x, "y": enemy_spawn_y, "dir": enemy_dir})
-        
-        # -1
-        home_base_x = home_base_coords[0] + tile_size / 4
-        home_base_y = home_base_coords[1] + tile_size / 4
-        
-        if home_base[1] == 0: home_dir = 'up'
-        if home_base[1] == 9: home_dir = 'down'
-        if home_base[0] == 0: home_dir = 'left'
-        if home_base[0] == 9: home_dir = 'right'
-        
-        enemy_path[-1]["dir"] = home_dir
-        
-        enemy_path.append({"x": home_base_x, "y": home_base_y, "dir": home_dir})
-
     bullets = []
 
     # Enemies list
@@ -180,17 +128,20 @@ def run_game(use_agent=False, agent_seed=None):
 
     tower_sprites = []
     try:
-        tower_sprite_1 = pygame.image.load("Sprites/Towers/Tower-#1.png")
+        BASE_PATH = os.path.dirname(__file__)
+        ASSETS_PATH = os.path.join(BASE_PATH, "assets", "Sprites")
+        
+        tower_sprite_1 = pygame.image.load(os.path.join(ASSETS_PATH, "Towers", "Tower-#1.png"))
         # Scale sprite
         tower_sprite_1 = pygame.transform.scale(tower_sprite_1, (60, 60))
         tower_sprites.append(tower_sprite_1)
         
-        tower_sprite_2 = pygame.image.load("Sprites/Towers/Tower-#2.png")
+        tower_sprite_2 = pygame.image.load(os.path.join(ASSETS_PATH, "Towers", "Tower-#2.png"))
         # Scale sprite
         tower_sprite_2 = pygame.transform.scale(tower_sprite_2, (60, 60))
         tower_sprites.append(tower_sprite_2)
         
-        tower_sprite_3 = pygame.image.load("Sprites/Towers/Tower-#3.png")
+        tower_sprite_3 = pygame.image.load(os.path.join(ASSETS_PATH, "Towers", "Tower-#3.png"))
         # Scale sprite
         tower_sprite_3 = pygame.transform.scale(tower_sprite_3, (60, 60))
         tower_sprites.append(tower_sprite_3)
@@ -200,12 +151,15 @@ def run_game(use_agent=False, agent_seed=None):
 
     factory_sprites = []
     try:
-        factory_sprite_1 = pygame.image.load("Sprites/Factories/Factory-#1.png")
+        BASE_PATH = os.path.dirname(__file__)
+        ASSETS_PATH = os.path.join(BASE_PATH, "assets", "Sprites")
+        
+        factory_sprite_1 = pygame.image.load(os.path.join(ASSETS_PATH, "Factories", "Factory-#1.png"))
         # Scale sprite
         factory_sprite_1 = pygame.transform.scale(factory_sprite_1, (60, 60))
         factory_sprites.append(factory_sprite_1)
         
-        factory_sprite_2 = pygame.image.load("Sprites/Factories/Factory-#2.png")
+        factory_sprite_2 = pygame.image.load(os.path.join(ASSETS_PATH, "Factories", "Factory-#2.png"))
         # Scale sprite
         factory_sprite_2 = pygame.transform.scale(factory_sprite_2, (60, 60))
         factory_sprites.append(factory_sprite_2)
@@ -230,19 +184,23 @@ def run_game(use_agent=False, agent_seed=None):
     game_state = "playing"
     
     if use_agent:
-        env = TowerDefenseEnv()
+        env = TowerDefenseEnv(render_mode="human")
         env.action_space.seed(agent_seed)
 
-        obs, _ = env.reset(options={
-            "board_file": CURRENT_BOARD_FILE,
-            "starting_money": STARTING_MONEY,
-            "starting_resource_1": STARTING_RESOURCE_1,
-            "starting_resource_2": STARTING_RESOURCE_2,
-            "starting_health": STARTING_HEALTH,
-            "enemy_waves": enemy_waves
-        })
+        obs, info = env.reset()
         
-        done = False
+        running = True
+        terminated = False
+        truncated = False
+        
+        while running and not (terminated or truncated):
+            action = env.action_space.sample()
+            
+            obs, reward, terminated, truncated, info = env.step(action)
+            
+        env.close()
+        pygame.quit()
+        return
     
     
     while running:
@@ -279,7 +237,7 @@ def run_game(use_agent=False, agent_seed=None):
                             if box_rect.collidepoint(click_pos):
                                 dragging_tower = True
                                 if tower_index < len(tower_sprites) and tower_sprites[tower_index] is not None:
-                                    original = pygame.image.load(f"Sprites/Towers/Tower-#{tower_index + 1}.png")
+                                    original = pygame.image.load(os.path.join(ASSETS_PATH, "Towers", f"Tower-#{tower_index + 1}.png"))
                                     drag_sprite = pygame.transform.scale(original, (tile_size, tile_size))
                                 print(f"Started dragging tower {tower_index}")
                                 break
@@ -289,7 +247,7 @@ def run_game(use_agent=False, agent_seed=None):
                             if box_rect.collidepoint(click_pos):
                                 dragging_factory = True
                                 if factory_index < len(factory_sprites) and factory_sprites[factory_index] is not None:
-                                    original = pygame.image.load(f"Sprites/Factories/Factory-#{factory_index + 1}.png")
+                                    original = pygame.image.load(os.path.join(ASSETS_PATH, "Factories", f"Factory-#{factory_index + 1}.png"))
                                     drag_sprite = pygame.transform.scale(original, (tile_size, tile_size))
                                 print(f"Started draggin factory {factory_index}")
                                 break
@@ -402,66 +360,28 @@ def run_game(use_agent=False, agent_seed=None):
             enemies, enemies_spawned, spawn_started, last_spawn_time, health, money, resource_1, resource_2, current_wave, can_place_towers, reward, game_state = update_game_state(enemies, enemies_spawned, enemies_to_spawn, spawn_started, last_spawn_time, spawn_interval,
             enemy_waves, current_wave, MAX_WAVES, enemy_path, health, towers, factories, bullets, board,
             money, resource_1, resource_2, can_place_towers, FACTORY_DEATH_PENALTY,
-            board_x, board_y, tile_size, screen_width, screen_height, pygame.time.get_ticks())
+            board_x, board_y, tile_size, screen_width, screen_height, pygame.time.get_ticks(), 16)
+            
+            render(board, home_base_coords, enemy_spawn_coords, mouse_pos,
+                spawn_started, can_place_towers,
+                health, money, resource_1, resource_2,
+                current_wave, MAX_WAVES, enemy_path,
+                tower_sprites, factory_sprites,
+                towers, factories, enemies, bullets,
+                dragging_tower, dragging_factory, drag_sprite, DEBUG_WAYPOINTS,
+                screen, bg_color, board_x, board_y, board_size, board_color,
+                tile_count, tile_size, path_tile_color, tower_tile_color_a, tower_tile_color_b,
+                line_color, play_button_x, screen_width,
+                ui_panel_color, ui_box_color, ui_box_hover, ui_box_border)
             
             if health <= 0:
                 game_state = "defeat"
-            
-        if use_agent and not done and game_state == "playing":
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT: # Window close
-                    running = False
-                elif event.type == pygame.KEYDOWN: # On key press
-                    if event.key == pygame.K_ESCAPE:
-                        running = False
-                    else:
-                        print(pygame.key.name(event.key))
-            mouse_pos = (-110, -100)
-            pygame.time.delay(16)
-            
-            # Choose a random action from the action space
-            action = env.action_space.sample()
-            
-            # Change action to nothing if action is BUILD_FACTORY with a subtype of 2, since there is no factory with a subtype of 2
-            if action[0] == 2 and action[1] == 2:
-                action = [0, 0, 0, 0]
-            
-            obs, reward, done, game_state, truncated, info = env.step(
-                action,
-                TOWER0_COST_MONEY,
-                TOWER1_COST_MONEY, TOWER1_COST_RESOURCE_1,
-                TOWER2_COST_MONEY, TOWER2_COST_RESOURCE_1, TOWER2_COST_RESOURCE_2,
-                FACTORY0_COST_MONEY,
-                FACTORY1_COST_MONEY, FACTORY1_COST_RESOURCE_1,
-                tile_size, FACTORY_DEATH_PENALTY,
-                board_x, board_y, screen_width, screen_height, enemy_path
-            )
-            
-            board = env.board
-            spawn_started = env.spawn_started
-            can_place_towers = env.can_place_towers
-            health = env.health
-            money = env.money
-            resource_1 = env.resource_1
-            resource_2 = env.resource_2
-            current_wave = env.current_wave
-            towers = env.towers
-            factories = env.factories
-            enemies = env.enemies
-            bullets = env.bullets
-            
-            env.action_space.seed(agent_seed + env.time)
-            
-            if done:
-                use_agent = False
         
         if game_state in ["victory", "defeat"]:
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
-                        return run_game(use_agent=False, seed=None)
-                    elif event.key == pygame.K_t:
-                        return run_game(use_agent=True, seed=agent_seed + 1)
+                        return run_game(use_agent=False, agent_seed=None)
                     elif event.key == pygame.K_ESCAPE:
                         running = False
         
@@ -474,18 +394,6 @@ def run_game(use_agent=False, agent_seed=None):
         elif game_state == "defeat":
             draw_end_screen(screen, "DEFEAT")
             
-        else:
-            render(board, home_base_coords, enemy_spawn_coords, mouse_pos,
-                spawn_started, can_place_towers, fonts,
-                health, money, resource_1, resource_2,
-                current_wave, MAX_WAVES, enemy_path,
-                tower_sprites, factory_sprites,
-                towers, factories, enemies, bullets,
-                dragging_tower, dragging_factory, drag_sprite, DEBUG_WAYPOINTS,
-                screen, bg_color, board_x, board_y, board_size, board_color,
-                tile_count, tile_size, path_tile_color, tower_tile_color_a, tower_tile_color_b,
-                line_color, play_button_x, screen_width,
-                ui_panel_color, ui_box_color, ui_box_hover, ui_box_border)
             
         clock.tick(60)
 

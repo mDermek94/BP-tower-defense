@@ -1,7 +1,7 @@
 
 import pygame
-from typing import List
 from math import *
+import os
 
 class Factory:
     sprite = None
@@ -22,7 +22,11 @@ class Factory:
         # Load and scale sprite
         if self.sprite is None:
             try:
-                original = pygame.image.load(f"Sprites/Factories/Factory-#{self.type + 1}.png")
+                BASE_PATH = os.path.dirname(__file__)
+                ASSETS_PATH = os.path.join(BASE_PATH, "assets", "Sprites")
+                
+                sprite_path = os.path.join(ASSETS_PATH, "Factories", f"Factory-#{self.type + 1}.png")
+                original = pygame.image.load(sprite_path)
                 # Scale to fit tile size
                 scale_factor = max(1, tile_size // original.get_width())
                 new_size = original.get_width() * scale_factor

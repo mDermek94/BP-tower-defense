@@ -3,6 +3,8 @@ import random
 import math
 import argparse
 from dataclasses import dataclass
+import os
+from config import CURRENT_WAVE_FILE
 
 @dataclass
 class EnemyType:
@@ -160,7 +162,8 @@ def generate_game(difficulty, num_waves):
 
 
 def save_into_file(waves):
-    file = open("wave_test_random.txt", "w")
+        
+    file = open(CURRENT_WAVE_FILE, "w")
     
     num_wave = 0
     

@@ -1,14 +1,14 @@
 
 import pygame
 from bullet import Bullet
-from typing import List
-from math import *        
+from math import *
+import os
 
 class Tower:
     sprite = None
     sprite_size = None
     
-    def __init__(self, x: float, y: float, health: int, tile_size: int, type: int = 0):
+    def __init__(self, x, y, health, tile_size, type = 0):
 
         self.x = x
         self.y = y
@@ -29,7 +29,11 @@ class Tower:
         # Load and scale sprite
         if self.sprite is None:
             try:
-                original = pygame.image.load(f"Sprites/Towers/Tower-#{self.type + 1}.png")
+                BASE_PATH = os.path.dirname(__file__)
+                ASSETS_PATH = os.path.join(BASE_PATH, "assets", "Sprites")
+                
+                sprite_path = os.path.join(ASSETS_PATH, "Towers", f"Tower-#{self.type + 1}.png")
+                original = pygame.image.load(sprite_path)
                 
                 # Scale to fit tile size
                 scale_factor = max(1, tile_size // original.get_width())
@@ -40,7 +44,7 @@ class Tower:
                 print(f"Could not load tower sprite: {e}")
                 self.sprite = None
     
-    def enemy_distance(self, enemy_x: float, enemy_y: float):
+    def enemy_distance(self, enemy_x, enemy_y):
         dx = enemy_x - self.x
         dy = enemy_y - self.y
         return dx*dx + dy*dy
@@ -60,7 +64,7 @@ class Tower:
         return best_enemy
             
     
-    def shoot(self, current_time: int, enemies, bullets: List[Bullet]):
+    def shoot(self, current_time, enemies, bullets):
         
         if current_time - self.last_shot_time < self.shot_cooldown:
             return
@@ -77,7 +81,7 @@ class Tower:
         bullets.append(bullet)
         self.last_shot_time = current_time
     
-    def draw(self, surface: pygame.Surface):
+    def draw(self, surface):
 
         if self.sprite is not None:
             # Draw sprite
@@ -88,6 +92,6 @@ class Tower:
             pygame.draw.rect(surface, (100, 100, 100), 
                            (int(self.x - 15), int(self.y - 15), 30, 30))
 
-    def update(self, current_time: int, enemies, bullets: List[Bullet], surface: pygame.Surface):
+    def update(self, current_time, enemies, bullets, surface):
         self.shoot(current_time, enemies, bullets)
         self.draw(surface)

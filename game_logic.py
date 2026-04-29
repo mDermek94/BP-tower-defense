@@ -106,7 +106,33 @@ def build_enemy_path(board, enemy_spawn, home_base, board_x, board_y, tile_size)
     current_x, current_y = get_tile_center(goal[0], goal[1], board_x, board_y, tile_size)
     waypoints.append({"x": current_x, "y": current_y, "dir": None})
     
-    #print("Waypoints:", waypoints)
+    home_base_coords, enemy_spawn_coords = get_base_enemy_coords(home_base, enemy_spawn, board_x, board_y, tile_size)
+    
+    # Adjust first and last waypoints of the path
+    if waypoints:
+        # 0
+        enemy_spawn_x = enemy_spawn_coords[0] + tile_size / 4
+        enemy_spawn_y = enemy_spawn_coords[1] + tile_size / 4
+        if enemy_spawn[0] == 0: enemy_dir = 'right'
+        if enemy_spawn[0] == 9: enemy_dir = 'left'
+        if enemy_spawn[1] == 0: enemy_dir = 'down'
+        if enemy_spawn[1] == 9: enemy_dir = 'up'
+        
+        waypoints.insert(0, {"x": enemy_spawn_x, "y": enemy_spawn_y, "dir": enemy_dir})
+        
+        # -1
+        home_base_x = home_base_coords[0] + tile_size / 4
+        home_base_y = home_base_coords[1] + tile_size / 4
+        
+        if home_base[1] == 0: home_dir = 'up'
+        if home_base[1] == 9: home_dir = 'down'
+        if home_base[0] == 0: home_dir = 'left'
+        if home_base[0] == 9: home_dir = 'right'
+        
+        waypoints[-1]["dir"] = home_dir
+        
+        waypoints.append({"x": home_base_x, "y": home_base_y, "dir": home_dir})
+    
     return waypoints
                 
 
@@ -209,7 +235,7 @@ def get_base_enemy_coords(home_base, enemy_spawn, board_x, board_y, tile_size):
     return home_base_coords, enemy_spawn_coords
 
 def render(board, home_base_coords, enemy_spawn_coords, mouse_pos,
-           spawn_started, can_place_towers, fonts,
+           spawn_started, can_place_towers,
            health, money, resource_1, resource_2,
            current_wave, max_waves, enemy_path,
            tower_sprites, factory_sprites,
@@ -220,7 +246,16 @@ def render(board, home_base_coords, enemy_spawn_coords, mouse_pos,
            line_color, play_button_x,
            screen_width, ui_panel_color, ui_box_color, ui_box_hover, ui_box_border):
     
-    # Draw background and empty side areas
+
+        fonts = {
+            "button_font": pygame.font.SysFont(None, 24),
+            "money_font": pygame.font.SysFont(None, 26),
+            "health_font": pygame.font.SysFont(None, 26),
+            "resource_font": pygame.font.SysFont(None, 26),
+            "wave_font": pygame.font.SysFont(None, 26)
+        }
+    
+        # Draw background and empty side areas
         screen.fill(bg_color)
 
         # Draw tiled board
@@ -356,7 +391,7 @@ def update_game_state(
     money, resource_1, resource_2,
     can_place_towers,
     factory_death_penalty,
-    board_x, board_y, tile_size, screen_width, screen_height, time
+    board_x, board_y, tile_size, screen_width, screen_height, time, time_increment
 ):
     reward = 0
     game_state = "playing"
@@ -377,12 +412,11 @@ def update_game_state(
     if not spawn_started and enemies_spawned == enemies_to_spawn and len(enemies) == 0 and not can_place_towers:
         enemies_spawned = 0
         can_place_towers = True
-        if current_wave < MAX_WAVES:
-            current_wave += 1
-        else:
+        current_wave += 1
+        if current_wave > MAX_WAVES:
             game_state = "victory"
 
-    delta_time = 1
+    delta_time = int(time_increment / 16)
     # Update all enemies and remove those that reached the end
     for enemy in enemies[:]:
         enemy.follow_path(delta_time)
@@ -573,14 +607,12 @@ def draw_end_screen(screen, text):
     screen_y = 100
     
     title = font.render(text, True, color)
-    restart_player = small_font.render("Press R to restart in player mode", True, (255, 255, 255))
-    restart_agent = small_font.render("Press T to restart in agent mode", True, (255, 255, 255))
+    restart_player = small_font.render("Press R to restart", True, (255, 255, 255))
     quit_text = small_font.render("Press ESC to quit", True, (255, 255, 255))
     
     screen.blit(title, (screen_x, screen_y))
     screen.blit(restart_player, (screen_x, screen_y + 100))
-    screen.blit(restart_agent, (screen_x, screen_y + 200))
-    screen.blit(quit_text, (screen_x, screen_y + 300))
+    screen.blit(quit_text, (screen_x, screen_y + 200))
     
     pygame.display.flip()
 

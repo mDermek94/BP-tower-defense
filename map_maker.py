@@ -3,6 +3,8 @@ import pygame
 import random
 import heapq
 import argparse
+import os
+from config import CURRENT_BOARD_FILE
 
 # Window size
 screen_width = 1000
@@ -164,7 +166,8 @@ def make_random_board(): # Generate random weights for the board tiles
     return board
 
 def save_board(board, home_base, enemy_spawn): # Save the board into a .txt file
-    file = open("board_test_random.txt", "w")
+    
+    file = open(CURRENT_BOARD_FILE, "w")
     for row in range(11):
         for col in range(11):
             file.write(str(board[row][col]))
@@ -495,7 +498,7 @@ def main():
         "T - generates new random start and end positions", # T
         "G - generate a path from the current start to current end (disregards difficulty)", # G
         "C - clear the board", # C
-        "X - generate a whole map based on seed and difficulty setting", # X
+        "X - generate a whole map based on seed and difficulty setting and save it", # X
         "S - save the map into map_test_random.txt", # S
         "B - [DEBUG] show current board weights", # B
         "ESC - close the window" # ESC
