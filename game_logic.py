@@ -523,14 +523,18 @@ def perform_action(action_type, action_subtype, tile_x, tile_y,
     if not can_place_towers:
         return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board
     
+    # Print actions taken
+    action_names = ["BUILD TOWER", "BUILD FACTORY", "START WAVE"]
+    print(f"Action: {action_names[action_type]} | subtype={action_subtype} | pos=({tile_x}, {tile_y})")
+    
     # Check if chosen tile is an empty tower tile
-    if board[tile_y][tile_x] != 1:
+    if board[tile_y][tile_x] != 1 and action_type != 2:
         print("Cannot place building on an occupied tile")
         reward -= 10 # Penalty for trying to build on an occupied tile
         return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board, reward
     
     # Place a tower
-    if action_type == 1:
+    if action_type == 0:
         tower_index = action_subtype
         
         tower_center_x, tower_center_y = get_tile_center(tile_x, tile_y, board_x, board_y, tile_size)
@@ -562,7 +566,7 @@ def perform_action(action_type, action_subtype, tile_x, tile_y,
         board[tile_y][tile_x] = 2 + new_tower.type
     
     # Place a factory
-    elif action_type == 2:
+    elif action_type == 1:
         factory_index = action_subtype
         
         factory_center_x, factory_center_y = get_tile_center(tile_x, tile_y, board_x, board_y, tile_size)
@@ -579,7 +583,7 @@ def perform_action(action_type, action_subtype, tile_x, tile_y,
             resource_1 -= factory1_cost_resource_1
             
         else:
-            print("Not enough resources to build factory")
+            print("Not enough resources to build factory or wrong factory subtype")
             reward -= 10 # Penalty for trying to build without required resources
             return money, resource_1, resource_2, spawn_started, enemies_to_spawn, last_spawn_time, board, reward
         
@@ -587,7 +591,7 @@ def perform_action(action_type, action_subtype, tile_x, tile_y,
         board[tile_y][tile_x] = 5 + new_factory.type
         
     # Start wave phase
-    elif action_type == 3:
+    elif action_type == 2:
         if can_place_towers:
             spawn_started = True
             enemies_to_spawn = len(enemy_waves[current_wave - 1])

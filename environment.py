@@ -22,7 +22,7 @@ class TowerDefenseEnv(gym.Env):
         self.render_mode = render_mode
 
         self.action_space = gym.spaces.MultiDiscrete([
-            4,  # action_type: 0=nothing, 1=build tower, 2=build factory, 3=start wave phase
+            3,  # action_type: 0=build tower, 1=build factory, 2=start wave phase
             3,  # action_subtype: tower/factory type
             10, # x coordinate
             10  # y coordinate
@@ -131,14 +131,9 @@ class TowerDefenseEnv(gym.Env):
                 TILE_SIZE, BOARD_X, BOARD_Y, self.time
             )
             
-            # Print actions taken
-            action_names = ["INVALID ACTION", "BUILD TOWER", "BUILD FACTORY", "START WAVE"]
-            if (self.board[y][x] != 0 or action[0] in (0, 3)) and action[0] != 0: # Print chosen action, except if invalid
-                print(f"Action: {action_names[action_type]} | subtype={action_subtype} | pos=({x}, {y})")
-            
             self.wave_reward += reward
             
-            if action_type == 3: # Action = swap to wave phase
+            if action_type == 2: # Action = swap to wave phase
                 self.spawn_started = True
                 self.enemies_to_spawn = len(self.enemy_waves[self.current_wave - 1])
                 self.last_spawn_time = self.time
