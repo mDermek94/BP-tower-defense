@@ -197,10 +197,13 @@ class TowerDefenseEnv(gym.Env):
             self.wave_reward = 0
         
         if self.health <= 0:
+            print(f"Wave {self.current_wave} finished. Total reward: {round(self.wave_reward, 2)}.")
             game_state = "defeat"
             done = True
         
         if self.current_wave - 1 >= self.max_waves:
+            print(f"Wave {self.current_wave} finished. Total reward: {round(self.wave_reward, 2)}.")
+            game_state = "victory"
             done = True
         
         if self.render_mode == "human":
