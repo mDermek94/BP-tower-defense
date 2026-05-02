@@ -28,16 +28,16 @@ class TowerDefenseEnv(gym.Env):
             10  # y coordinate
         ])
         
-        # 10x10 RGB image observation space
-        self.observation_space = gym.spaces.Box(
+        # 10x10 RGB image
+        self.info_space = gym.spaces.Box(
             low=0,              # Min value for each channel
             high=255,           # Max value for each channel
             shape=(10, 10, 3),  # 10x10x3 image - x coordinate, y coordinate, (r, g, b) value
             dtype=np.uint8
         )
         
-        # Additional info
-        self.info_space = gym.spaces.Dict({
+        # Observation space
+        self.observation_space = gym.spaces.Dict({
             "board": gym.spaces.Box(low=0, high=6, shape=(10, 10), dtype=np.int32),     # The state of the game grid - what towers and factories are where and where is the path enemies walk on
             "resources": gym.spaces.Box(low=0, high=10000, shape=(5,), dtype=np.int32), # Health, Money, Resource_1, Resouce_2, current wave index
             "next_wave": gym.spaces.Box(low=0, high=1000, shape=(3,), dtype=np.int32)   # How many enemies of each type there are in the next wave, example 1 type0, 2 type1 and 4 type2 enemies are represented as [1, 2, 4]
@@ -222,7 +222,7 @@ class TowerDefenseEnv(gym.Env):
         
         return self._get_obs(), self.wave_reward, done, False, self._get_info(), game_state
     
-    def _get_info(self):
+    def _get_obs(self):
         # Get the current observation space
         
         if self.current_wave - 1 >= self.max_waves:
@@ -248,7 +248,7 @@ class TowerDefenseEnv(gym.Env):
             "next_wave": np.array(counts, dtype=np.int32)
         }
 
-    def _get_obs(self):
+    def _get_info(self):
         img = np.zeros((11, 10, 3), dtype=np.uint8)
         
         # Color palette for board codes, values made by AI - ChatGPT

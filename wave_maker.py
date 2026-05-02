@@ -177,7 +177,7 @@ def save_into_file(waves):
 
 def validate_seed(seed):
     if seed is None:
-        return None
+        seed = random.randint(0, 9999999)
     if not (0 <= seed <= 9999999):
         raise ValueError("Seed must be between 0 and 9999999")
     
@@ -195,11 +195,9 @@ def main():
     difficulty = max(1, args.difficulty)
     num_waves = max(1, args.num_waves)
     
-    if seed is not None:
-        random.seed(seed)
-        print(f"Generating waves | difficulty={difficulty} | number of waves={num_waves} |seed={seed}")
-    else:
-        print(f"Generating waves | difficulty={difficulty} | number of waves={num_waves}")
+    random.seed(seed)
+    print(f"Generating waves | difficulty={difficulty} | number of waves={num_waves} | seed={seed}")
+
         
     run_wave_maker(difficulty, num_waves)
 

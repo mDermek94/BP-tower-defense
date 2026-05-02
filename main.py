@@ -66,6 +66,9 @@ def main():
     
     seed = validate_seed(args.seed)
     
+    if args.gymnasium:
+        print(f"Using seed: {seed}")
+    
     run_game(use_agent=args.gymnasium, agent_seed=seed)
 
 def run_game(use_agent=False, agent_seed=None):

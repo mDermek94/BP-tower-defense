@@ -468,7 +468,7 @@ def generate_parameters(difficulty):
 
 def validate_seed(seed):
     if seed is None:
-        return None
+        seed = random.randint(0, 9999999)
     if not (0 <= seed <= 9999999):
         raise ValueError("Seed must be between 0 and 9999999")
     
@@ -484,11 +484,8 @@ def main():
     seed = validate_seed(args.seed)
     difficulty = max(min(args.difficulty, 20), 1)
     
-    if seed is not None:
-        random.seed(seed)
-        print(f"Starting map maker | difficulty={difficulty} | seed={seed}")
-    else:
-        print(f"Starting map maker | difficulty={difficulty}")
+    random.seed(seed)
+    print(f"Starting map maker | difficulty={difficulty} | seed={seed}")
     
     hints = [
         "Controls:", # Title
