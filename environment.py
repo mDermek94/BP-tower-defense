@@ -12,7 +12,7 @@ from game_logic import perform_action, update_game_state, get_starting_board, re
 
 class TowerDefenseEnv(gym.Env):
     metadata = {
-        "render_modes": ["rgb_array", "human"],
+        "render_modes": ["dictionary", "human"],
         "render_fps": 60,
     }
     
@@ -38,9 +38,10 @@ class TowerDefenseEnv(gym.Env):
         
         # Observation space
         self.observation_space = gym.spaces.Dict({
-            "board": gym.spaces.Box(low=0, high=6, shape=(10, 10), dtype=np.int32),     # The state of the game grid - what towers and factories are where and where is the path enemies walk on
-            "resources": gym.spaces.Box(low=0, high=10000, shape=(5,), dtype=np.int32), # Health, Money, Resource_1, Resouce_2, current wave index
-            "next_wave": gym.spaces.Box(low=0, high=1000, shape=(3,), dtype=np.int32)   # How many enemies of each type there are in the next wave, example 1 type0, 2 type1 and 4 type2 enemies are represented as [1, 2, 4]
+            "board": gym.spaces.Box(low=0, high=6, shape=(10, 10), dtype=np.int32),         # The state of the game grid - what towers and factories are where and where is the path enemies walk on
+            "resources": gym.spaces.Box(low=0, high=100000, shape=(5,), dtype=np.int32),    # Health, Money, Resource_1, Resouce_2, current wave index
+            "next_wave": gym.spaces.Box(low=0, high=1000, shape=(3,), dtype=np.int32),      # How many enemies of each type there are in the next wave, example 1 type0, 2 type1 and 4 type2 enemies are represented as [1, 2, 4]
+            "next_3_waves": gym.spaces.Box(low=0, high=1000, shape=(3, 3), dtype=np.int32)  # Show the next three waves to further allow the agent to plan ahead
         })
         
         self.window = None
@@ -220,6 +221,15 @@ class TowerDefenseEnv(gym.Env):
         
         return self._get_obs(), self.wave_reward, done, False, self._get_info(), game_state
     
+    def _count_enemy_types(self, wave):
+        counts = [0, 0, 0]
+        
+        for enemy_type in wave:
+            if 0 <= enemy_type < 3:
+                counts[enemy_type] += 1
+                
+        return counts
+    
     def _get_obs(self):
         # Get the current observation space
         
@@ -228,10 +238,20 @@ class TowerDefenseEnv(gym.Env):
         else:
             next_wave = self.enemy_waves[self.current_wave - 1] # Adjust next wave
         
-        # Calculate enemy counts per type
-        counts = [0, 0, 0]
-        for enemy in next_wave:
-            counts[enemy] += 1
+        # Calculate enemy counts per type for the next wave
+        next_wave_counts = self._count_enemy_types(next_wave)
+        
+        # Next 3 waves
+        next_3_waves = []
+        
+        for offset in range(3):
+            wave_index = self.current_wave - 1 + offset
+            if wave_index >= self.max_waves:
+                wave_counts = [0, 0, 0]
+            else:
+                wave_counts = self._count_enemy_types(self.enemy_waves[wave_index])
+    
+            next_3_waves.append(wave_counts)
         
         # Return the observation
         return {
@@ -243,7 +263,8 @@ class TowerDefenseEnv(gym.Env):
                 self.health,
                 self.current_wave
             ], dtype=np.int32),
-            "next_wave": np.array(counts, dtype=np.int32)
+            "next_wave": np.array(next_wave_counts, dtype=np.int32),
+            "next_3_waves": np.array(next_3_waves, dtype=np.int32)
         }
 
     def _get_info(self):
@@ -277,13 +298,13 @@ class TowerDefenseEnv(gym.Env):
         
         return img
     
-    def render(self, mode = "rgb_array"):
+    def render(self, mode = "dictionary"):
         if mode not in self.metadata["render_modes"]:
             raise ValueError(f"Unsupported render mode: {mode}")
 
         img = self._get_obs()
 
-        if mode == "rgb_array":
+        if mode == "dictionary":
             return img
 
         if mode == "human":
