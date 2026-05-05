@@ -503,10 +503,10 @@ def main():
     for i in range(10):
         print(hints[i])
     
-    run_map_maker(seed, difficulty)
+    run_map_maker(seed, args.seed, difficulty)
     
 
-def run_map_maker(seed, difficulty):
+def run_map_maker(seed, args_seed, difficulty):
     pygame.init()
     
     board = []
@@ -514,6 +514,8 @@ def run_map_maker(seed, difficulty):
     board = make_board()
     
     spawn_switcher = True
+    
+    args_seed = args_seed
     
     home_base, enemy_spawn = choose_random_start_end()
 
@@ -532,6 +534,11 @@ def run_map_maker(seed, difficulty):
                     running = False
                 elif event.key == pygame.K_s:
                     # Save board into a .txt
+                    path = dijkstra(board, home_base, enemy_spawn)
+                    board = make_board()
+                    for coords in path:
+                        board[coords[1]][coords[0]] = 0
+                    print("Board saved.")
                     save_board(board, home_base, enemy_spawn)
                 elif event.key == pygame.K_b:
                     # Show board weights debug
@@ -572,8 +579,9 @@ def run_map_maker(seed, difficulty):
                             home_base, enemy_spawn = choose_random_start_end()
                             
                         path = generate_valid_path(random_board, enemy_spawn, home_base, params["waypoint_count"], params["waypoint_offset"], params["use_global"])
-                        if seed is not None:
-                            random.seed(seed + attempt)
+                        if args_seed is not None:
+                            seed += attempt
+                            random.seed(seed)
                         else:
                             random.seed()
                         if path is None:
