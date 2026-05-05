@@ -28,14 +28,6 @@ class TowerDefenseEnv(gym.Env):
             10  # y coordinate
         ])
         
-        # 10x10 RGB image
-        self.info_space = gym.spaces.Box(
-            low=0,              # Min value for each channel
-            high=255,           # Max value for each channel
-            shape=(10, 10, 3),  # 10x10x3 image - x coordinate, y coordinate, (r, g, b) value
-            dtype=np.uint8
-        )
-        
         # Observation space
         self.observation_space = gym.spaces.Dict({
             "board": gym.spaces.Box(low=0, high=6, shape=(10, 10), dtype=np.int32),         # The state of the game grid - what towers and factories are where and where is the path enemies walk on
@@ -55,6 +47,7 @@ class TowerDefenseEnv(gym.Env):
         self.current_wave = None
         self.enemy_waves = None
         self.max_waves = None
+        self.game_state = "playing"
         
         self.time = 0
         self.can_place_towers = True
@@ -93,6 +86,7 @@ class TowerDefenseEnv(gym.Env):
         self.enemies = []
         self.bullets = []
         self.wave_reward = 0
+        self.game_state = "playing"
         
         self.spawn_started = False
         self.last_spawn_time = 0
@@ -113,7 +107,7 @@ class TowerDefenseEnv(gym.Env):
         
         done = False    # Terminated
         
-        game_state = "playing"
+        self.game_state = "playing"
         
         if self.can_place_towers:
             # If in build phase, perform an action based on [action_type, action_subtype, x, y]
@@ -140,7 +134,7 @@ class TowerDefenseEnv(gym.Env):
                 self.last_spawn_time = self.time
                 self.can_place_towers = False
                 # Just return current state, since the agent cannot perform any actions after starting a wave
-                return self._get_obs(), self.wave_reward, done, False, self._get_info(), game_state
+                return self._get_obs(), self.wave_reward, done, False, self._get_info()
             
             # Update the game state
             (self.enemies,
@@ -153,7 +147,7 @@ class TowerDefenseEnv(gym.Env):
                 self.resource_2,
                 self.current_wave,
                 self.can_place_towers,
-                reward, game_state
+                reward, self.game_state
             ) = update_game_state(
                 self.enemies, self.enemies_spawned, self.enemies_to_spawn,
                 self.spawn_started, self.last_spawn_time, self.spawn_interval,
@@ -179,7 +173,7 @@ class TowerDefenseEnv(gym.Env):
                 self.resource_2,
                 self.current_wave,
                 self.can_place_towers,
-                reward, game_state
+                reward, self.game_state
             ) = update_game_state(
                 self.enemies, self.enemies_spawned, self.enemies_to_spawn,
                 self.spawn_started, self.last_spawn_time, self.spawn_interval,
@@ -199,12 +193,12 @@ class TowerDefenseEnv(gym.Env):
         
         if self.health <= 0:
             print(f"Wave {self.current_wave} finished. Total reward: {round(self.wave_reward, 2)}.")
-            game_state = "defeat"
+            self.game_state = "defeat"
             done = True
         
         if self.current_wave - 1 >= self.max_waves:
-            print(f"Wave {self.current_wave} finished. Total reward: {round(self.wave_reward, 2)}.")
-            game_state = "victory"
+            #print(f"Wave {self.current_wave} finished. Total reward: {round(self.wave_reward, 2)}.")
+            self.game_state = "victory"
             done = True
         
         if self.render_mode == "human":
@@ -212,14 +206,14 @@ class TowerDefenseEnv(gym.Env):
         
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    game_state = "quit"
+                    self.game_state = "quit"
                     done = True
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        game_state = "quit"
+                        self.game_state = "quit"
                         done = True
         
-        return self._get_obs(), self.wave_reward, done, False, self._get_info(), game_state
+        return self._get_obs(), self.wave_reward, done, False, self._get_info()
     
     def _count_enemy_types(self, wave):
         counts = [0, 0, 0]
@@ -268,35 +262,15 @@ class TowerDefenseEnv(gym.Env):
         }
 
     def _get_info(self):
-        img = np.zeros((11, 10, 3), dtype=np.uint8)
         
-        # Color palette for board codes, values made by AI - ChatGPT
-        palette = {
-            0: (227, 189, 0),   # path tile
-            1: (72, 209, 56),   # empty buildable tile
-            2: (42, 115, 33),   # tower type 0
-            3: (0, 150, 0),     # tower type 1
-            4: (0, 100, 0),     # tower type 2
-            5: (80, 80, 80),    # factory type 0
-            6: (120, 120, 120), # factory type 1
+        return {
+            "game_state": self.game_state,
+            "health": self.health,
+            "money": self.money,
+            "resource_1": self.resource_1,
+            "resource_2": self.resource_2,
+            "current_wave": self.current_wave
         }
-        
-        # Draw the board
-        for y in range(11):
-            for x in range(10):
-                if y < 10:
-                    v = self.board[y][x]
-                else:
-                    v = 8
-                img[y, x] = palette.get(v, (40, 40, 40))
-                
-        # Draw a health bar on the bottom row
-        max_health = 100
-        safe_health = max(0, min(self.health, max_health))
-        health_bar_len = int(10 * safe_health / max_health)
-        img[10, :health_bar_len] = (255, 0, 0)
-        
-        return img
     
     def render(self, mode = "dictionary"):
         if mode not in self.metadata["render_modes"]:

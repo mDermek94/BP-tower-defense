@@ -22,28 +22,20 @@ num_steps = 0
 
 max_wave = 0
 
-num_episodes = 100
+num_episodes = 20
 
 for _ in range(num_episodes):
-    last_wave = [None, None, None]
-    current_wave = 0
-    
+    env.action_space.seed(seed + _)
     while not (terminated or truncated):
         action = env.action_space.sample()
         
-        obs, reward, terminated, truncated, info, game_state = env.step(action)
-        
-        current_wave_count = obs["next_wave"]
-        if last_wave[0] != current_wave_count[0] or last_wave[1] != current_wave_count[1] or last_wave[2] != current_wave_count[2]:
-            current_wave += 1
-            last_wave = current_wave_count
-        
+        obs, reward, terminated, truncated, info = env.step(action)
         
         reward_sum += reward
         num_steps += 1
 
-    max_wave += current_wave
-    print(f"Game ended by: {game_state}")
+    max_wave += (info["current_wave"] - 1)
+    print(f"Game ended by: {info["game_state"]}")
     env.reset()
     terminated = False
     truncated = False

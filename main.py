@@ -200,9 +200,9 @@ def run_game(use_agent=False, agent_seed=None):
         while running and not (terminated or truncated):
             action = env.action_space.sample()
             
-            obs, reward, terminated, truncated, info, game_state = env.step(action)
+            obs, reward, terminated, truncated, info = env.step(action)
         
-        print(f"Game ended by: {game_state}")
+        print(f"Game ended by: {info["game_state"]}")
         
         env.close()
         pygame.quit()
