@@ -10,11 +10,6 @@ from config import CURRENT_BOARD_FILE, SCREEN_HEIGHT, SCREEN_WIDTH
 screen_width = SCREEN_WIDTH
 screen_height = SCREEN_HEIGHT
 
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Tower Defense Map Maker")
-
-clock = pygame.time.Clock()
-
 INF = 10000000
 
 MAX_MAP_GENERATION_ATTEMPTS = 500
@@ -508,6 +503,11 @@ def main():
 
 def run_map_maker(seed, args_seed, difficulty):
     pygame.init()
+    
+    screen = pygame.display.set_mode((screen_width, screen_height))
+    pygame.display.set_caption("Tower Defense Map Maker")
+
+    clock = pygame.time.Clock()
     
     board = []
     random_board = make_random_board()
