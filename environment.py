@@ -32,8 +32,8 @@ class TowerDefenseEnv(gym.Env):
         self.observation_space = gym.spaces.Dict({
             "board": gym.spaces.Box(low=0, high=6, shape=(10, 10), dtype=np.int32),         # The state of the game grid - what towers and factories are where and where is the path enemies walk on
             "resources": gym.spaces.Box(low=0, high=100000, shape=(5,), dtype=np.int32),    # Health, Money, Resource_1, Resouce_2, current wave index
-            "next_wave": gym.spaces.Box(low=0, high=1000, shape=(3,), dtype=np.int32),      # How many enemies of each type there are in the next wave, example 1 type0, 2 type1 and 4 type2 enemies are represented as [1, 2, 4]
-            "next_3_waves": gym.spaces.Box(low=0, high=1000, shape=(3, 3), dtype=np.int32)  # Show the next three waves to further allow the agent to plan ahead
+            "next_wave": gym.spaces.Box(low=0, high=10000, shape=(3,), dtype=np.int32),      # How many enemies of each type there are in the next wave, example 1 type0, 2 type1 and 4 type2 enemies are represented as [1, 2, 4]
+            "next_3_waves": gym.spaces.Box(low=0, high=10000, shape=(3, 3), dtype=np.int32)  # Show the next three waves to further allow the agent to plan ahead
         })
         
         self.window = None
@@ -249,7 +249,7 @@ class TowerDefenseEnv(gym.Env):
         
         # Return the observation
         return {
-            "board": np.array(self.board, dtype=np.int32),
+            "board": np.array([row[:10] for row in self.board[:10]], dtype=np.int32),
             "resources": np.array([
                 self.money,
                 self.resource_1,
