@@ -205,7 +205,6 @@ def run_game(use_agent=False, agent_seed=None):
         print(f"Game ended by: {info["game_state"]}")
         
         env.close()
-        pygame.quit()
         return
     
     

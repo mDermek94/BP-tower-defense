@@ -43,4 +43,3 @@ for _ in range(num_episodes):
 print(f"Average reward over {num_episodes} episodes: {round(reward_sum/num_steps, 2)}, average max reached wave: {max_wave/num_episodes}")
 
 env.close()
-pygame.quit()
