@@ -106,7 +106,7 @@ except pygame.error as e:
     print(f"Could not load factory sprite: {e}")
     FACTORY_SPRITES.append(None)
 
-# Colors - suggestet by ChatGPT
+# Colors - suggested by ChatGPT
 BG_COLOR = (40, 40, 40)             # Window background
 BOARD_COLOR = (0, 0, 0)             # Board background
 UI_PANEL_COLOR = (60, 60, 60)       # UI panel background

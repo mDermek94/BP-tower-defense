@@ -30,7 +30,7 @@ board_size = tile_size * tile_count
 board_x = (screen_width - board_size) // 2
 board_y = (screen_height - board_size) // 2
 
-# Colors
+# Colors - suggested by ChatGPT
 bg_color = (40, 40, 40)             # Window background
 board_color = (0, 0, 0)             # Board background
 ui_panel_color = (60, 60, 60)       # UI panel background
