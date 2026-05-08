@@ -570,6 +570,15 @@ def run_map_maker(seed, args_seed, difficulty):
                     home_base_coords, enemy_spawn_coords = get_base_enemy_coords(home_base, enemy_spawn)
                 elif event.key == pygame.K_x:
                     # Generate path
+                    
+                    # Reset seed
+                    if args_seed is not None:
+                        random.seed(args_seed)
+                    else:
+                        random.seed()
+                    
+                    path = None
+                    
                     for attempt in range(MAX_MAP_GENERATION_ATTEMPTS):
                         params = generate_parameters(difficulty)
                         random_board = make_random_board()
@@ -579,11 +588,6 @@ def run_map_maker(seed, args_seed, difficulty):
                             home_base, enemy_spawn = choose_random_start_end()
                             
                         path = generate_valid_path(random_board, enemy_spawn, home_base, params["waypoint_count"], params["waypoint_offset"], params["use_global"])
-                        if args_seed is not None:
-                            seed += attempt
-                            random.seed(seed)
-                        else:
-                            random.seed()
                         if path is None:
                             continue
                         elif not validate_path(enemy_spawn, home_base, path):
