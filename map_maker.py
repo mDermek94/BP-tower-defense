@@ -489,7 +489,7 @@ def main():
         "T - generates new random start and end positions", # T
         "G - generate a path from the current start to current end (disregards difficulty)", # G
         "C - clear the board", # C
-        "X - generate a whole map based on seed and difficulty setting and save it", # X
+        "X - generate a whole map based on seed and difficulty setting", # X
         "S - save the map into map_test_random.txt", # S
         "B - [DEBUG] show current board weights", # B
         "ESC - close the window" # ESC
