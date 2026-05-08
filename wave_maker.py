@@ -81,7 +81,7 @@ def apply_archetype_weights(weights, archetype):
     modified_weights = weights.copy()
     
     if archetype == "swarm":
-        modified_weights[1] *= 2.0 # Boost spawn rate of tier 1 enemies during swarm waves
+        modified_weights[0] *= 2.0 # Boost spawn rate of tier 0 enemies during swarm waves
         
     elif archetype == "strong":
         max_tier = max(modified_weights.keys())
