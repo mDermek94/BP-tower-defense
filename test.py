@@ -24,8 +24,10 @@ max_wave = 0
 
 num_episodes = 50
 
+env.action_space.seed(seed)
+
 for _ in range(num_episodes):
-    env.action_space.seed(seed + _)
+    
     while not (terminated or truncated):
         action = env.action_space.sample()
         
